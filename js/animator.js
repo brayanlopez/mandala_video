@@ -32,6 +32,24 @@ const Easing = {
     );
   },
 
+  /** Rebote tipo pelota: 3 sub-rebotes decrecientes antes de detenerse */
+  easeOutBounce: (t) => {
+    const n1 = 7.5625,
+      d1 = 2.75;
+    if (t < 1 / d1) {
+      return n1 * t * t;
+    } else if (t < 2 / d1) {
+      t -= 1.5 / d1;
+      return n1 * t * t + 0.75;
+    } else if (t < 2.5 / d1) {
+      t -= 2.25 / d1;
+      return n1 * t * t + 0.9375;
+    } else {
+      t -= 2.625 / d1;
+      return n1 * t * t + 0.984375;
+    }
+  },
+
   /** Lineal */
   /* v8 ignore next */
   linear: (t) => t,
@@ -233,6 +251,34 @@ export class Animator {
           break;
         }
 
+        case "drop":
+          // Cae desde arriba con rebote al llegar (posición se ajusta abajo)
+          s.alpha = Easing.easeOutCubic(t);
+          s.scale = 1;
+          s.extraRotDeg = 0;
+          break;
+
+        case "slideOut":
+          // Desliza hacia adentro desde fuera del canvas en dirección radial
+          s.alpha = Easing.easeOutCubic(t);
+          s.scale = 1;
+          s.extraRotDeg = 0;
+          break;
+
+        case "shrink":
+          // Aparece a 3× tamaño y se contrae a su tamaño final
+          s.alpha = Easing.easeOutCubic(t);
+          s.scale = 1 + 2 * (1 - Easing.easeOutCubic(t)); // 3.0 → 1.0
+          s.extraRotDeg = 0;
+          break;
+
+        case "spiral":
+          // Dos vueltas completas mientras se escala hacia el tamaño final
+          s.alpha = Easing.easeOutCubic(t);
+          s.scale = Easing.easeOutCubic(t);
+          s.extraRotDeg = 720 * (1 - t); // 720° → 0°
+          break;
+
         case "fadeIn":
         default:
           s.alpha = Easing.easeOutCubic(t);
@@ -242,17 +288,30 @@ export class Animator {
       }
 
       // ─── Calcular tamaño y rotación final ─────────────────────────────────
-      const finalSize = slot.imgSize * s.scale;
+      const imgScale = this._config.canvas.imgScale ?? 1;
+      const finalSize = slot.imgSize * s.scale * imgScale;
       const finalRotDeg = slot.angleDeg + this._globalRot + s.extraRotDeg;
 
-      // ─── Calcular posición (flyIn vuela desde el centro) ──────────────────
+      // ─── Calcular posición (efectos que modifican X/Y) ────────────────────
       let finalX = slot.x;
       let finalY = slot.y;
 
-      if (entryEffect === "flyIn" && t < 1) {
-        const tE = Easing.easeOutCubic(t);
-        finalX = this._cx + (slot.x - this._cx) * tE;
-        finalY = this._cy + (slot.y - this._cy) * tE;
+      if (t < 1) {
+        if (entryEffect === "flyIn") {
+          const tE = Easing.easeOutCubic(t);
+          finalX = this._cx + (slot.x - this._cx) * tE;
+          finalY = this._cy + (slot.y - this._cy) * tE;
+        } else if (entryEffect === "drop") {
+          // Cae desde una altura proporcional al canvas con rebote
+          finalY =
+            slot.y -
+            this._config.canvas.height * 0.4 * (1 - Easing.easeOutBounce(t));
+        } else if (entryEffect === "slideOut") {
+          // Entra desde fuera del canvas en la dirección radial del slot
+          const factor = 2.5 * (1 - Easing.easeOutCubic(t));
+          finalX = slot.x + (slot.x - this._cx) * factor;
+          finalY = slot.y + (slot.y - this._cy) * factor;
+        }
       }
 
       this._renderer.drawImage(

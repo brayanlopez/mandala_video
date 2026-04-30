@@ -10,6 +10,9 @@ import {
   computeLissajousLayout,
   computeRosaLayout,
   computeKochLayout,
+  computeTriangularLayout,
+  computeArquimedesLayout,
+  computeSierpinskiLayout,
   PATTERN_REGISTRY,
 } from "../js/geometry-patterns.js";
 
@@ -382,9 +385,7 @@ describe("computeLissajousLayout", () => {
     const cy = config.canvas.height / 2;
     const slots = computeLissajousLayout(config);
     // En Lissajous ningún slot está exactamente en el centro
-    const atCenter = slots.filter(
-      (s) => Math.hypot(s.x - cx, s.y - cy) < 10,
-    );
+    const atCenter = slots.filter((s) => Math.hypot(s.x - cx, s.y - cy) < 10);
     expect(atCenter).toHaveLength(0);
   });
 
@@ -428,7 +429,7 @@ describe("computeRosaLayout", () => {
     const slots = computeRosaLayout(makeConfig());
     // j=4 es el índice central (punta), j=0 y j=8 son los extremos (base)
     for (let p = 0; p < 5; p++) {
-      const tipSlot  = slots[p * 9 + 4]; // punta del pétalo
+      const tipSlot = slots[p * 9 + 4]; // punta del pétalo
       const baseSlot = slots[p * 9 + 0]; // base del pétalo
       expect(tipSlot.imgSize).toBeGreaterThan(baseSlot.imgSize);
     }
@@ -464,7 +465,9 @@ describe("computeKochLayout", () => {
     const slots = computeKochLayout(config);
     // Koch no tiene imagen central — todos los slots están en la corona exterior
     slots.forEach((s) => {
-      expect(Math.hypot(s.x - cx, s.y - cy)).toBeGreaterThan(minDim(config) * 0.2);
+      expect(Math.hypot(s.x - cx, s.y - cy)).toBeGreaterThan(
+        minDim(config) * 0.2,
+      );
     });
   });
 
@@ -482,9 +485,137 @@ describe("computeKochLayout", () => {
 
 // ─── PATTERN_REGISTRY ────────────────────────────────────────────────────────
 
+// ─── computeTriangularLayout ─────────────────────────────────────────────────
+
+describe("computeTriangularLayout", () => {
+  // (N+1)(N+2)/2 con N=7 → 36 slots
+  const EXPECTED = ((7 + 1) * (7 + 2)) / 2;
+
+  test(`retorna exactamente ${EXPECTED} slots`, () => {
+    expect(computeTriangularLayout(makeConfig())).toHaveLength(EXPECTED);
+  });
+
+  test("todos los slots tienen coordenadas numéricas finitas", () => {
+    expectValidCoordinates(computeTriangularLayout(makeConfig()));
+  });
+
+  test("entranceOrder es secuencial (del centro hacia el borde)", () => {
+    expectSequentialOrder(computeTriangularLayout(makeConfig()));
+  });
+
+  test("el primer slot es el más cercano al centro del canvas", () => {
+    const config = makeConfig();
+    const cx = config.canvas.width / 2;
+    const cy = config.canvas.height / 2;
+    const slots = computeTriangularLayout(config);
+    const d0 = Math.hypot(slots[0].x - cx, slots[0].y - cy);
+    const dLast = Math.hypot(slots.at(-1).x - cx, slots.at(-1).y - cy);
+    expect(d0).toBeLessThan(dLast);
+  });
+
+  test("el slot central tiene imgSize mayor que los del borde", () => {
+    const slots = computeTriangularLayout(makeConfig());
+    expect(slots[0].imgSize).toBeGreaterThan(slots.at(-1).imgSize);
+  });
+
+  test("cada slot contiene todos los campos requeridos de MandalaSlot", () => {
+    expectMandalaSlotShape(computeTriangularLayout(makeConfig())[0]);
+  });
+});
+
+// ─── computeArquimedesLayout ──────────────────────────────────────────────────
+
+describe("computeArquimedesLayout", () => {
+  test("retorna exactamente 55 slots", () => {
+    expect(computeArquimedesLayout(makeConfig())).toHaveLength(55);
+  });
+
+  test("todos los slots tienen coordenadas numéricas finitas", () => {
+    expectValidCoordinates(computeArquimedesLayout(makeConfig()));
+  });
+
+  test("entranceOrder es secuencial (sigue la espiral)", () => {
+    expectSequentialOrder(computeArquimedesLayout(makeConfig()));
+  });
+
+  test("el primer slot está cerca del centro y el último cerca del borde", () => {
+    const config = makeConfig();
+    const cx = config.canvas.width / 2;
+    const cy = config.canvas.height / 2;
+    const slots = computeArquimedesLayout(config);
+    const d0 = Math.hypot(slots[0].x - cx, slots[0].y - cy);
+    const dLast = Math.hypot(slots.at(-1).x - cx, slots.at(-1).y - cy);
+    expect(d0).toBeLessThan(dLast);
+  });
+
+  test("el radio crece monotónicamente a lo largo de la espiral", () => {
+    const config = makeConfig();
+    const cx = config.canvas.width / 2;
+    const cy = config.canvas.height / 2;
+    const slots = computeArquimedesLayout(config);
+    for (let i = 1; i < slots.length; i++) {
+      const prevR = Math.hypot(slots[i - 1].x - cx, slots[i - 1].y - cy);
+      const currR = Math.hypot(slots[i].x - cx, slots[i].y - cy);
+      expect(currR).toBeGreaterThanOrEqual(prevR);
+    }
+  });
+
+  test("los imgSize decrecen del centro hacia el borde", () => {
+    const slots = computeArquimedesLayout(makeConfig());
+    expect(slots[0].imgSize).toBeGreaterThan(slots.at(-1).imgSize);
+  });
+
+  test("cada slot contiene todos los campos requeridos de MandalaSlot", () => {
+    expectMandalaSlotShape(computeArquimedesLayout(makeConfig())[0]);
+  });
+});
+
+// ─── computeSierpinskiLayout ──────────────────────────────────────────────────
+
+describe("computeSierpinskiLayout", () => {
+  // 3^DEPTH = 3^3 = 27 sub-triángulos supervivientes
+  const EXPECTED = 27;
+
+  test(`retorna exactamente ${EXPECTED} slots`, () => {
+    expect(computeSierpinskiLayout(makeConfig())).toHaveLength(EXPECTED);
+  });
+
+  test("todos los slots tienen coordenadas numéricas finitas", () => {
+    expectValidCoordinates(computeSierpinskiLayout(makeConfig()));
+  });
+
+  test("entranceOrder es secuencial (orden recursivo esquina a esquina)", () => {
+    expectSequentialOrder(computeSierpinskiLayout(makeConfig()));
+  });
+
+  test("ningún slot está en el centro exacto del canvas (agujero central de Sierpinski)", () => {
+    const config = makeConfig();
+    const cx = config.canvas.width / 2;
+    const cy = config.canvas.height / 2;
+    computeSierpinskiLayout(config).forEach((s) => {
+      expect(Math.hypot(s.x - cx, s.y - cy)).toBeGreaterThan(
+        minDim(config) * 0.05,
+      );
+    });
+  });
+
+  test("los imgSize están en el rango [36, 70]", () => {
+    computeSierpinskiLayout(makeConfig()).forEach((s) => {
+      expect(s.imgSize).toBeGreaterThanOrEqual(36);
+      expect(s.imgSize).toBeLessThanOrEqual(70);
+    });
+  });
+
+  test("cada slot contiene todos los campos requeridos de MandalaSlot", () => {
+    expectMandalaSlotShape(computeSierpinskiLayout(makeConfig())[0]);
+  });
+});
+
+// ─── PATTERN_REGISTRY ────────────────────────────────────────────────────────
+
 describe("PATTERN_REGISTRY", () => {
-  test("contiene exactamente 11 patrones", () => {
-    expect(Object.keys(PATTERN_REGISTRY)).toHaveLength(11);
+  test("contiene exactamente 14 patrones", () => {
+    expect(Object.keys(PATTERN_REGISTRY)).toHaveLength(14);
   });
 
   test("cada entrada tiene las propiedades label, category y fn", () => {
@@ -519,9 +650,23 @@ describe("PATTERN_REGISTRY", () => {
     expect(categories).toContain("Fractales");
   });
 
-  test("los nuevos patrones (lissajous, rosa, koch) están registrados", () => {
-    expect(PATTERN_REGISTRY).toHaveProperty("lissajous");
-    expect(PATTERN_REGISTRY).toHaveProperty("rosa");
-    expect(PATTERN_REGISTRY).toHaveProperty("koch");
+  test("todos los patrones implementados están registrados", () => {
+    const expected = [
+      "circular",
+      "espiral",
+      "estrella",
+      "flor",
+      "cuadricula",
+      "pentagono",
+      "triskelion",
+      "diamante",
+      "triangular",
+      "lissajous",
+      "rosa",
+      "arquimedes",
+      "koch",
+      "sierpinski",
+    ];
+    expected.forEach((key) => expect(PATTERN_REGISTRY).toHaveProperty(key));
   });
 });

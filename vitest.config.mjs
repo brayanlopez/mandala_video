@@ -7,7 +7,13 @@ export default defineConfig({
     include: ["tests/**/*.test.js"],
     coverage: {
       provider: "v8",
-      include: ["js/geometry.js", "js/geometry-patterns.js", "js/animator.js", "js/renderer-p5.js"],
+      include: [
+        "js/geometry.js",
+        "js/geometry-patterns.js",
+        "js/animator.js",
+        "js/renderer-p5.js",
+        "js/presets.js",
+      ],
       exclude: [],
       reporter: ["text", "lcov"],
       thresholds: {

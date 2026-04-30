@@ -54,11 +54,11 @@ function makeSlots(count = 3) {
 
 describe("Animator — estado inicial", () => {
   test("_cx y _cy quedan precalculados desde config.canvas en el constructor", () => {
-    const config = makeConfig()
-    const animator = new Animator(makeRenderer(), makeSlots(1), [null], config)
-    expect(animator._cx).toBe(config.canvas.width / 2)
-    expect(animator._cy).toBe(config.canvas.height / 2)
-  })
+    const config = makeConfig();
+    const animator = new Animator(makeRenderer(), makeSlots(1), [null], config);
+    expect(animator._cx).toBe(config.canvas.width / 2);
+    expect(animator._cy).toBe(config.canvas.height / 2);
+  });
 
   test("elapsed comienza en 0", () => {
     const animator = new Animator(
@@ -320,6 +320,40 @@ describe("Animator.tickExport", () => {
     expect(renderer.flush).toHaveBeenCalled();
   });
 
+  test("aplica imgScale al tamaño final cuando está definido en config", () => {
+    // fadeIn siempre fija s.scale=1, así finalSize = imgSize * 1 * imgScale
+    const config = makeConfig({
+      staggerDelay: 0,
+      entryDuration: 100,
+      speed: 1.0,
+    });
+    config.canvas.imgScale = 2.0;
+    const renderer = makeRenderer();
+    const slots = makeSlots(1); // slot.imgSize = 80
+    const animator = new Animator(renderer, slots, [null], config);
+    animator.tickExport(101); // t ≥ 1 → fully visible, s.scale = 1
+    expect(renderer.drawImage).toHaveBeenCalled();
+    const [, , , finalSize] = renderer.drawImage.mock.calls[0];
+    // finalSize = 80 * 1 * 2.0 = 160
+    expect(finalSize).toBeCloseTo(160, 1);
+  });
+
+  test("usa escala 1 cuando imgScale no está definido en config (rama ?? 1)", () => {
+    // config.canvas.imgScale sin definir → undefined ?? 1 = 1
+    const config = makeConfig({
+      staggerDelay: 0,
+      entryDuration: 100,
+      speed: 1.0,
+    });
+    const renderer = makeRenderer();
+    const animator = new Animator(renderer, makeSlots(1), [null], config);
+    animator.tickExport(101); // t ≥ 1 → s.scale = 1, imgScale = 1
+    expect(renderer.drawImage).toHaveBeenCalled();
+    const [, , , finalSize] = renderer.drawImage.mock.calls[0];
+    // finalSize = 80 * 1 * 1 = 80 (sin amplificación)
+    expect(finalSize).toBeCloseTo(80, 1);
+  });
+
   test("dibuja el slot 0 cuando elapsed > 0 (su stagger comienza en 0 ms)", () => {
     // slot0.startMs = 0*160 = 0; con elapsed>0, t>0 → drawImage llamado
     const renderer = makeRenderer();
@@ -464,6 +498,111 @@ describe("Animator — efectos de entrada", () => {
     expect(finalX).toBeLessThan(960);
     expect(finalY).toBeGreaterThan(200);
     expect(finalY).toBeLessThan(540);
+  });
+
+  // ── drop ──────────────────────────────────────────────────────────────────
+
+  test("drop: alpha=1 y posición = slot cuando t=1", () => {
+    const config = makeConfig({ entryEffect: "drop", staggerDelay: 0 });
+    const renderer = makeRenderer();
+    const slots = makeSlots(1);
+    const animator = new Animator(renderer, slots, [null], config);
+    advanceUntilVisible(animator, 0);
+    expect(animator._state[0].alpha).toBeCloseTo(1, 2);
+    expect(animator._state[0].scale).toBe(1);
+  });
+
+  test("drop: finalY está por encima del slot durante la caída (t=0.5)", () => {
+    const config = makeConfig({
+      entryEffect: "drop",
+      staggerDelay: 0,
+      speed: 1.0,
+    });
+    const renderer = makeRenderer();
+    const slots = makeSlots(1); // slot.y = 200
+    const animator = new Animator(renderer, slots, [null], config);
+    animator.tickExport(350); // t ≈ 0.5
+    const [, , finalY] = renderer.drawImage.mock.calls[0];
+    expect(finalY).toBeLessThan(slots[0].y); // imagen está más arriba
+  });
+
+  test("drop: recorre todos los tramos de easeOutBounce (cobertura completa)", () => {
+    // t ≈ 0.2, 0.5, 0.8, 0.95 cubren las 4 ramas de easeOutBounce
+    const config = makeConfig({
+      entryEffect: "drop",
+      staggerDelay: 0,
+      entryDuration: 1000,
+      speed: 1.0,
+    });
+    const renderer = makeRenderer();
+    const animator = new Animator(renderer, makeSlots(1), [null], config);
+    [200, 300, 300, 150].forEach((ms) => animator.tickExport(ms));
+    expect(renderer.drawImage).toHaveBeenCalled();
+  });
+
+  // ── slideOut ──────────────────────────────────────────────────────────────
+
+  test("slideOut: alpha=1 y posición = slot cuando t=1", () => {
+    const config = makeConfig({ entryEffect: "slideOut", staggerDelay: 0 });
+    const renderer = makeRenderer();
+    const animator = new Animator(renderer, makeSlots(1), [null], config);
+    advanceUntilVisible(animator, 0);
+    expect(animator._state[0].alpha).toBeCloseTo(1, 2);
+  });
+
+  test("slideOut: posición se modifica durante la animación (t=0.5)", () => {
+    const config = makeConfig({
+      entryEffect: "slideOut",
+      staggerDelay: 0,
+      speed: 1.0,
+    });
+    const renderer = makeRenderer();
+    const slots = makeSlots(1); // slot.x=100 (a la izquierda del centro 960)
+    const animator = new Animator(renderer, slots, [null], config);
+    animator.tickExport(350); // t ≈ 0.5
+    const [, finalX] = renderer.drawImage.mock.calls[0];
+    // factor > 0, slot.x < cx → finalX = 100 + (100-960)*factor < 100 (más lejos del centro)
+    expect(finalX).toBeLessThan(slots[0].x);
+  });
+
+  // ── shrink ────────────────────────────────────────────────────────────────
+
+  test("shrink: scale = 1 cuando t=1 (tamaño final normalizado)", () => {
+    const config = makeConfig({ entryEffect: "shrink", staggerDelay: 0 });
+    const animator = new Animator(makeRenderer(), makeSlots(1), [null], config);
+    advanceUntilVisible(animator, 0);
+    expect(animator._state[0].scale).toBeCloseTo(1, 5);
+  });
+
+  test("shrink: scale > 1 a mitad de la animación (imagen más grande)", () => {
+    const config = makeConfig({
+      entryEffect: "shrink",
+      staggerDelay: 0,
+      speed: 1.0,
+    });
+    const animator = new Animator(makeRenderer(), makeSlots(1), [null], config);
+    animator.tickExport(350); // t ≈ 0.5
+    expect(animator._state[0].scale).toBeGreaterThan(1);
+  });
+
+  // ── spiral ────────────────────────────────────────────────────────────────
+
+  test("spiral: extraRotDeg = 0 cuando t=1", () => {
+    const config = makeConfig({ entryEffect: "spiral", staggerDelay: 0 });
+    const animator = new Animator(makeRenderer(), makeSlots(1), [null], config);
+    advanceUntilVisible(animator, 0);
+    expect(animator._state[0].extraRotDeg).toBeCloseTo(0, 5);
+  });
+
+  test("spiral: extraRotDeg = 360 a mitad de la animación (mitad de las dos vueltas)", () => {
+    const config = makeConfig({
+      entryEffect: "spiral",
+      staggerDelay: 0,
+      speed: 1.0,
+    });
+    const animator = new Animator(makeRenderer(), makeSlots(1), [null], config);
+    animator.tickExport(350); // t ≈ 0.5 → extraRotDeg = 720*(1-0.5) = 360
+    expect(animator._state[0].extraRotDeg).toBeCloseTo(360, 0);
   });
 });
 

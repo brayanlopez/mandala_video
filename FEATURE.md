@@ -99,21 +99,28 @@ Las siguientes propuestas se derivan del analisis de la arquitectura, los coment
 - **Impacto:** Renderizado WebGL acelerado por GPU, efectos 3D, mejor rendimiento con mandalas de alta densidad.
 - **Esfuerzo estimado:** Medio — se crea `renderer-three.js` o `renderer-pixi.js` sin modificar el resto del sistema.
 
-#### F-02 — Nuevos patrones geometricos
+#### F-02 — Nuevos patrones geometricos ✅ Implementado
 
 - **Motivacion:** El codigo documenta explicitamente como agregar patrones al `PATTERN_REGISTRY`.
-- **Candidatos:**
-  - Cuadricula triangular (tiling de triangulos equilateros)
-  - Patron de Voronoi
-  - Laberinto o espiral de Arquimedes
-  - Patrones fractales (copo de nieve de Koch, triangulo de Sierpinski)
-- **Esfuerzo estimado:** Bajo por patron — solo se escribe una funcion `computeXxxLayout(config)`.
+- **Implementado:** 14 patrones en total (5 clasicos + 4 geometricos + 3 curvas + 2 fractales).
+  - Cuadricula triangular → `triangular` (malla baricéntrica, 3-fold, borde triangular)
+  - Espiral de Arquimedes → `arquimedes` (espiral densa de 4 vueltas, espaciado constante)
+  - Koch (fractal) → `koch` (copo de nieve, traza el perimetro)
+  - Sierpinski (fractal) → `sierpinski` (triangulo fractal profundidad 3)
+  - Ademas: `pentagono`, `triskelion`, `diamante`, `lissajous`, `rosa`
+- **Pendiente:** Patron de Voronoi (requiere algoritmo de Delaunay, complejidad alta).
+- **Nota:** El selector agrupa patrones por categoria (`<optgroup>`) y la unica fuente de verdad es `PATTERN_REGISTRY` en `geometry-patterns.js`.
 
-#### F-03 — Panel de configuracion visual (GUI en tiempo real)
+#### F-03 — Panel de configuracion visual (GUI en tiempo real) ✅ Implementado
 
 - **Motivacion:** Actualmente toda la configuracion requiere editar `config.js` manualmente.
-- **Propuesta:** Controles UI para colores de fondo, velocidades, tamanos, numero de anillos y activacion de loop, sin recargar la pagina.
-- **Esfuerzo estimado:** Medio — se agrega un panel lateral que escribe sobre el objeto `CONFIG` en memoria.
+- **Implementado:**
+  - Panel colapsable "⚙ Ajustes" que se despliega bajo la barra de controles
+  - **Sección Animación:** color de fondo, escala global de imágenes (nueva), velocidad de rotación, stagger, duración de entrada, loop
+  - **Sección Exportación:** FPS (30/60), motor de captura (CCapture/MediaRecorder), comando ffmpeg
+  - La barra de controles principal queda limpia con solo: reproduccion, velocidad, efecto, patron, exportar
+  - El panel se deshabilita durante la exportacion
+- **CONFIG.canvas.imgScale** (1.0) — multiplicador global de tamaño de imágenes, aplicado en `Animator._renderFrame` sin recargar el layout.
 
 #### F-04 — Exportacion a GIF animado
 
@@ -129,11 +136,21 @@ Las siguientes propuestas se derivan del analisis de la arquitectura, los coment
 - **Propuesta:** API `FileReader` / `createObjectURL` para sustituir imagenes de anillos en tiempo real.
 - **Esfuerzo estimado:** Medio — requiere adaptar la carga de imagenes en `renderer-p5.js` y `main.js`.
 
-#### F-06 — Guardado y carga de presets de configuracion
+#### F-06 — Guardado y carga de presets de configuracion ✅ Implementado
 
 - **Motivacion:** La infraestructura de LocalStorage ya esta referenciada en el codigo como punto de extension.
-- **Propuesta:** Boton "Guardar preset" que serializa `CONFIG` a LocalStorage / JSON descargable, y boton "Cargar preset" para restaurarlo.
-- **Esfuerzo estimado:** Bajo.
+- **Implementado** en `js/presets.js` (módulo puro, sin DOM):
+  - `capturePreset(config, pattern)` — serializa el estado UI-controlable
+  - `savePreset / loadPreset / listPresets / deletePreset` — CRUD en localStorage
+  - `presetToJSON / presetFromJSON` — serialización + validación estricta de estructura
+  - Validación: version, campos requeridos (`canvas`, `animation`), tipos antes de aplicar
+- **UI en el panel de ajustes** — sección "Presets":
+  - 💾 Guardar → localStorage (con nombre)
+  - ⬇ JSON → descarga el preset como archivo
+  - 📂 Cargar → restaura desde localStorage con `syncUIFromConfig()` + reinicio de animación
+  - 🗑 Borrar → elimina de localStorage
+  - ⬆ Importar → lee un archivo `.json`, lo valida y lo aplica
+- `syncUIFromConfig()` en `main.js` actualiza todos los sliders/selects cuando se carga un preset.
 
 #### F-07 — Sincronizacion con audio / BPM
 
@@ -141,15 +158,15 @@ Las siguientes propuestas se derivan del analisis de la arquitectura, los coment
 - **Propuesta:** Entrada de audio (microfono o archivo) con analisis de frecuencia via `Web Audio API`; mapear amplitud y BPM a la velocidad de rotacion y stagger delay.
 - **Esfuerzo estimado:** Alto — requiere nuevo modulo `audio-analyzer.js` y bindings en `animator.js`.
 
-#### F-08 — Efectos de entrada adicionales
+#### F-08 — Efectos de entrada adicionales ✅ Implementado
 
 - **Motivacion:** Solo hay 4 efectos actualmente; agregar mas variedad aumenta el valor creativo.
-- **Candidatos:**
-  - Flip horizontal / vertical
-  - Morph desde circulo
-  - Caida con rebote (drop)
-  - Giro 3D (requiere F-01 o CSS 3D transforms)
-- **Esfuerzo estimado:** Bajo por efecto — nuevo caso en el `switch` de `animator.js`.
+- **Implementado** (8 efectos en total):
+  - `drop` — Caída desde arriba con rebote (`easeOutBounce` en Y, nuevo en `Easing`)
+  - `slideOut` — Desliza desde fuera del canvas en la dirección radial del slot
+  - `shrink` — Aparece a 3× tamaño y se contrae al tamaño final (scale 3→1)
+  - `spiral` — Dos vueltas completas (720°) mientras escala desde 0
+- **Pendiente:** Flip (requiere scaleX independiente en renderer) y Giro 3D (requiere F-01).
 
 #### F-09 — Modo oscuro / temas de color dinamicos
 
@@ -182,11 +199,17 @@ Las siguientes propuestas se derivan del analisis de la arquitectura, los coment
 - **Propuesta:** Opcion `kioskMode: true` en `config.js` que itera patrones y efectos automaticamente.
 - **Esfuerzo estimado:** Bajo.
 
-#### F-14 — Tests automatizados
+#### F-14 — Tests automatizados ✅ Implementado
 
 - **Motivacion:** El modulo `geometry.js` y `geometry-patterns.js` son funciones puras ideales para pruebas unitarias.
-- **Propuesta:** Agregar Vitest o Jest con tests para las funciones de calculo geometrico y el estado de la maquina de animacion.
-- **Esfuerzo estimado:** Medio — sin impacto en produccion, mejora la mantenibilidad.
+- **Implementado** con **Vitest** + `@vitest/coverage-v8`:
+  - `tests/geometry.test.js` — `sanitizePath`, `resolveImage`, `computeMandalaLayout`, `computeLayout`
+  - `tests/geometry-patterns.test.js` — los 14 patrones, `PATTERN_REGISTRY`
+  - `tests/animator.test.js` — maquina de estados, easing, todos los efectos de entrada
+  - `tests/renderer-p5.test.js` — cola de comandos, cache de imagenes, `init()` con mock de p5 global
+  - `tests/presets.test.js` — CRUD en localStorage, serializacion/validacion JSON (entorno jsdom)
+- **232 tests**, **100% de cobertura** (statements, branches, functions, lines) con umbral de 95% en CI.
+- Scripts: `npm test` (rapido), `npm run test:watch` (modo interactivo), `npm run test:coverage` (con informe).
 
 ---
 

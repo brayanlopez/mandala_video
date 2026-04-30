@@ -43,8 +43,9 @@
         </div>
       </div>
 
-      <!-- ── Controles ──────────────────────────────────────────────────────── -->
+      <!-- ── Controles principales ──────────────────────────────────────────── -->
       <div class="controls">
+        <!-- Reproducción -->
         <div class="control-group">
           <button class="btn primary" id="btn-play" disabled>
             ▶ Reproducir
@@ -54,23 +55,9 @@
 
         <div class="sep"></div>
 
+        <!-- Efecto de entrada -->
         <div class="control-group">
-          <label for="speed-slider">Velocidad</label>
-          <input
-            type="range"
-            id="speed-slider"
-            min="0.2"
-            max="3"
-            step="0.1"
-            value="1.0"
-          />
-          <span id="speed-label">1.0×</span>
-        </div>
-
-        <div class="sep"></div>
-
-        <div class="control-group">
-          <label for="effect-select">Efecto entrada</label>
+          <label for="effect-select">Efecto</label>
           <select id="effect-select">
             <option value="scaleIn" selected>Scale In</option>
             <option value="fadeIn">Fade In</option>
@@ -81,113 +68,29 @@
 
         <div class="sep"></div>
 
+        <!-- Selector de patrón (opciones generadas desde PATTERN_REGISTRY) -->
+        <div class="control-group">
+          <label for="pattern-select">Patrón</label>
+          <select id="pattern-select" title="Seleccionar tipo de mandala"></select>
+        </div>
+
+        <div class="sep"></div>
+
+        <!-- Exportar -->
         <div class="control-group">
           <button class="btn" id="btn-export" disabled>⬇ Exportar WebM</button>
         </div>
 
         <div class="sep"></div>
 
-        <!-- ── Selector de patrón de mandala ──────────────────────────────── -->
-        <!-- Las opciones se generan dinámicamente desde PATTERN_REGISTRY en main.js -->
+        <!-- Toggle panel de ajustes -->
         <div class="control-group">
-          <label for="pattern-select">Patrón</label>
-          <select
-            id="pattern-select"
-            title="Seleccionar tipo de mandala"
-          ></select>
+          <button class="btn" id="btn-settings" title="Abrir / cerrar panel de ajustes">
+            ⚙ Ajustes
+          </button>
         </div>
 
-        <div class="sep"></div>
-
-        <!-- ── Color de fondo ─────────────────────────────────────────────── -->
-        <div class="control-group">
-          <label for="bg-color-input">Fondo</label>
-          <input
-            type="color"
-            id="bg-color-input"
-            value="#1a0a2e"
-            title="Color de fondo del canvas"
-          />
-        </div>
-
-        <div class="sep"></div>
-
-        <!-- ── Velocidad de rotación continua ────────────────────────────── -->
-        <div class="control-group">
-          <label for="rotation-slider">Rotación</label>
-          <input
-            type="range"
-            id="rotation-slider"
-            min="0"
-            max="0.15"
-            step="0.005"
-            value="0.04"
-          />
-          <span class="val-label" id="rotation-label">0.04</span>
-        </div>
-
-        <div class="sep"></div>
-
-        <!-- ── Stagger entre imágenes ─────────────────────────────────────── -->
-        <div class="control-group">
-          <label for="stagger-slider">Stagger</label>
-          <input
-            type="range"
-            id="stagger-slider"
-            min="0"
-            max="500"
-            step="10"
-            value="160"
-          />
-          <span class="val-label" id="stagger-label">160ms</span>
-        </div>
-
-        <div class="sep"></div>
-
-        <!-- ── Duración del efecto de entrada ────────────────────────────── -->
-        <div class="control-group">
-          <label for="duration-slider">Entrada</label>
-          <input
-            type="range"
-            id="duration-slider"
-            min="200"
-            max="2000"
-            step="50"
-            value="700"
-          />
-          <span class="val-label" id="duration-label">700ms</span>
-        </div>
-
-        <div class="sep"></div>
-
-        <!-- ── Loop ──────────────────────────────────────────────────────── -->
-        <div class="control-group">
-          <label for="loop-checkbox">Loop</label>
-          <input type="checkbox" id="loop-checkbox" />
-        </div>
-
-        <div class="sep"></div>
-
-        <!-- ── FPS de exportación ─────────────────────────────────────────── -->
-        <div class="control-group">
-          <label for="fps-select">FPS</label>
-          <select id="fps-select" title="Cuadros por segundo al exportar">
-            <option value="30">30</option>
-            <option value="60" selected>60</option>
-          </select>
-        </div>
-
-        <div class="sep"></div>
-
-        <!-- ── Modo de captura ───────────────────────────────────────────── -->
-        <div class="control-group">
-          <label for="capture-select">Captura</label>
-          <select id="capture-select" title="Motor de captura de video">
-            <option value="ccapture" selected>CCapture</option>
-            <option value="mediarecorder">MediaRecorder</option>
-          </select>
-        </div>
-
+        <!-- Status + barra de progreso -->
         <div class="status-area">
           <span id="status-text">Iniciando…</span>
           <div id="progress-wrap">
@@ -196,13 +99,163 @@
         </div>
       </div>
 
-      <!-- ── Nota ffmpeg ─────────────────────────────────────────────────────── -->
-      <div class="ffmpeg-note">
-        Para convertir el WebM a MP4 Full HD:
-        <code
-          >ffmpeg -i mandala.webm -c:v libx264 -crf 17 -pix_fmt yuv420p
-          mandala_1080p.mp4</code
-        >
+      <!-- ── Panel de ajustes (F-03) ───────────────────────────────────────── -->
+      <!-- Colapsable. Se despliega al pulsar el botón ⚙ Ajustes.             -->
+      <div class="settings-panel" id="settings-panel" aria-hidden="true">
+        <div class="settings-inner">
+
+          <!-- Sección: Animación ──────────────────────────────────────────── -->
+          <div class="settings-section">
+            <p class="settings-heading">Animación</p>
+
+            <div class="settings-row">
+              <label for="speed-slider">Velocidad</label>
+              <input
+                type="range"
+                id="speed-slider"
+                min="0.2"
+                max="3"
+                step="0.1"
+                value="1.0"
+              />
+              <span class="val-label" id="speed-label">1.0×</span>
+            </div>
+
+            <div class="settings-row">
+              <label for="bg-color-input">Color de fondo</label>
+              <input
+                type="color"
+                id="bg-color-input"
+                value="#1a0a2e"
+                title="Color de fondo del canvas"
+              />
+            </div>
+
+            <div class="settings-row">
+              <label for="img-scale-slider">Escala imágenes</label>
+              <input
+                type="range"
+                id="img-scale-slider"
+                min="0.3"
+                max="2.0"
+                step="0.05"
+                value="1.0"
+              />
+              <span class="val-label" id="img-scale-label">1.0×</span>
+            </div>
+
+            <div class="settings-row">
+              <label for="rotation-slider">Vel. rotación</label>
+              <input
+                type="range"
+                id="rotation-slider"
+                min="0"
+                max="0.15"
+                step="0.005"
+                value="0.04"
+              />
+              <span class="val-label" id="rotation-label">0.04</span>
+            </div>
+
+            <div class="settings-row">
+              <label for="stagger-slider">Stagger</label>
+              <input
+                type="range"
+                id="stagger-slider"
+                min="0"
+                max="500"
+                step="10"
+                value="160"
+              />
+              <span class="val-label" id="stagger-label">160ms</span>
+            </div>
+
+            <div class="settings-row">
+              <label for="duration-slider">Duración entrada</label>
+              <input
+                type="range"
+                id="duration-slider"
+                min="200"
+                max="2000"
+                step="50"
+                value="700"
+              />
+              <span class="val-label" id="duration-label">700ms</span>
+            </div>
+
+            <div class="settings-row">
+              <label for="loop-checkbox">Repetir (loop)</label>
+              <input type="checkbox" id="loop-checkbox" />
+            </div>
+          </div>
+
+          <!-- Sección: Presets ──────────────────────────────────────────────── -->
+          <div class="settings-section">
+            <p class="settings-heading">Presets</p>
+
+            <div class="settings-row">
+              <label for="preset-name-input">Nombre</label>
+              <input
+                type="text"
+                id="preset-name-input"
+                class="text-input"
+                placeholder="Mi preset…"
+                maxlength="60"
+              />
+            </div>
+
+            <div class="settings-row">
+              <button class="btn btn-sm" id="btn-save-preset">💾 Guardar</button>
+              <button class="btn btn-sm" id="btn-export-preset">⬇ JSON</button>
+              <!-- Importar JSON: label actúa de botón para el input oculto -->
+              <label class="btn btn-sm" for="import-preset-file">⬆ Importar</label>
+              <input
+                type="file"
+                id="import-preset-file"
+                accept=".json"
+                style="display:none"
+              />
+            </div>
+
+            <div class="settings-row">
+              <label for="preset-select">Guardados</label>
+              <select id="preset-select">
+                <option value="">— seleccionar —</option>
+              </select>
+              <button class="btn btn-sm" id="btn-load-preset">Cargar</button>
+              <button class="btn btn-sm" id="btn-delete-preset">Borrar</button>
+            </div>
+
+            <p id="preset-status" class="preset-status"></p>
+          </div>
+
+          <!-- Sección: Exportación ───────────────────────────────────────── -->
+          <div class="settings-section">
+            <p class="settings-heading">Exportación</p>
+
+            <div class="settings-row">
+              <label for="fps-select">FPS</label>
+              <select id="fps-select" title="Cuadros por segundo al exportar">
+                <option value="30">30 fps</option>
+                <option value="60" selected>60 fps</option>
+              </select>
+            </div>
+
+            <div class="settings-row">
+              <label for="capture-select">Motor</label>
+              <select id="capture-select" title="Motor de captura de video">
+                <option value="ccapture" selected>CCapture (recomendado)</option>
+                <option value="mediarecorder">MediaRecorder</option>
+              </select>
+            </div>
+
+            <div class="settings-row ffmpeg-row">
+              <label>Convertir a MP4</label>
+              <code>ffmpeg -i mandala.webm -c:v libx264 -crf 17 -pix_fmt yuv420p out.mp4</code>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
     <!-- .app -->
@@ -212,17 +265,11 @@
 
   p5.js v1.9.4       → node_modules/p5/lib/p5.min.js
   CCapture.js v1.1.0 → node_modules/ccapture.js/build/CCapture.all.min.js
-
-  Servir desde mismo origen ('self') es más seguro que CDN externo:
-  no hay riesgo de supply-chain attack ni dependencia de terceros en runtime.
-  Las versiones están fijadas en package.json.
 -->
     <script src="lib/p5.min.js"></script>
     <script src="lib/CCapture.all.min.js"></script>
 
     <!-- Módulo principal (ES modules) -->
-    <!-- Los event listeners para mandala:ready / export-start / export-end
-     están en main.js para cumplir con la CSP (sin scripts inline). -->
     <script type="module" src="js/main.js"></script>
   </body>
 </html>

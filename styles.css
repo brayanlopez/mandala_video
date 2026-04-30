@@ -299,18 +299,109 @@ input[type="checkbox"]:disabled {
   background: var(--success);
 }
 
-/* ── Nota de conversión a MP4 ─────────────────────────────────────── */
-.ffmpeg-note {
-  font-size: 11px;
-  color: var(--text-dim);
-  padding: 6px 20px;
+/* ── Panel de ajustes (F-03) ─────────────────────────────────────── */
+.settings-panel {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.35s ease;
   background: var(--bg);
+}
+
+.settings-panel.open {
+  max-height: 400px;
+}
+
+.settings-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  padding: 16px 20px;
   border-top: 1px solid var(--border);
 }
-.ffmpeg-note code {
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 240px;
+}
+
+.settings-heading {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-row label {
+  min-width: 110px;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.settings-row input[type="range"] {
+  width: 120px;
+}
+
+/* Comando ffmpeg dentro del panel */
+.ffmpeg-row {
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.ffmpeg-row code {
   font-family: "Menlo", "Monaco", "Courier New", monospace;
+  font-size: 10px;
   background: var(--surface);
-  padding: 1px 5px;
+  padding: 3px 6px;
   border-radius: 4px;
+  color: var(--text-dim);
+  word-break: break-all;
+}
+
+/* Variante pequeña de botón (presets) */
+.btn.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* Input de texto genérico (nombre de preset) */
+.text-input {
+  background: var(--surface);
   color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  width: 140px;
+}
+.text-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Mensaje de estado de presets */
+.preset-status {
+  font-size: 11px;
+  color: var(--text-dim);
+  min-height: 14px;
+}
+.preset-status.ok  { color: var(--success); }
+.preset-status.err { color: var(--danger);  }
+
+/* Botón de ajustes con estado activo */
+.btn.active {
+  background: rgba(124, 58, 237, 0.15);
+  border-color: var(--accent);
+  color: var(--accent-h);
 }

@@ -419,19 +419,19 @@ export function computeLissajousLayout(config) {
   const pool = buildImagePool(config);
   const minDim = Math.min(config.canvas.width, config.canvas.height);
 
-  const A     = minDim * 0.38;   // amplitud en X
-  const B     = minDim * 0.38;   // amplitud en Y
-  const a     = 3;               // frecuencia X
-  const b     = 2;               // frecuencia Y  →  relación 3:2 = figura mariposa
-  const DELTA = Math.PI / 4;     // desfase de fase (evita auto-intersección en t=0)
-  const N     = 48;
+  const A = minDim * 0.38; // amplitud en X
+  const B = minDim * 0.38; // amplitud en Y
+  const a = 3; // frecuencia X
+  const b = 2; // frecuencia Y  →  relación 3:2 = figura mariposa
+  const DELTA = Math.PI / 4; // desfase de fase (evita auto-intersección en t=0)
+  const N = 48;
 
   const slots = [];
   for (let i = 0; i < N; i++) {
-    const t      = (i / N) * 2 * Math.PI;
-    const x      = cx + A * Math.sin(a * t + DELTA);
-    const y      = cy + B * Math.sin(b * t);
-    const angle  = ((a * t + DELTA) / DEG + 360) % 360;
+    const t = (i / N) * 2 * Math.PI;
+    const x = cx + A * Math.sin(a * t + DELTA);
+    const y = cy + B * Math.sin(b * t);
+    const angle = ((a * t + DELTA) / DEG + 360) % 360;
     slots.push(makeSlot(x, y, angle, 0, i, 65, i));
   }
 
@@ -452,26 +452,34 @@ export function computeRosaLayout(config) {
   const pool = buildImagePool(config);
   const minDim = Math.min(config.canvas.width, config.canvas.height);
 
-  const K         = 5;                      // pétalos (k impar → k pétalos)
-  const PER_PETAL = 9;                      // imágenes por pétalo
-  const MAX_R     = minDim * 0.43;
-  const HALF_W    = Math.PI / (2 * K);      // semi-ancho angular del pétalo
+  const K = 5; // pétalos (k impar → k pétalos)
+  const PER_PETAL = 9; // imágenes por pétalo
+  const MAX_R = minDim * 0.43;
+  const HALF_W = Math.PI / (2 * K); // semi-ancho angular del pétalo
 
   const slots = [];
   for (let p = 0; p < K; p++) {
     const thetaTip = (2 * Math.PI * p) / K; // ángulo de la punta del pétalo
     for (let j = 0; j < PER_PETAL; j++) {
-      const frac   = (j + 0.5) / PER_PETAL; // 0..1 a lo largo del pétalo
+      const frac = (j + 0.5) / PER_PETAL; // 0..1 a lo largo del pétalo
       const offset = (frac - 0.5) * 2 * HALF_W; // -HALF_W .. +HALF_W
-      const theta  = thetaTip + offset;
+      const theta = thetaTip + offset;
       // r = MAX_R·cos(K·offset): máximo en la punta (offset=0), 0 en la base (|offset|=HALF_W)
-      const r      = MAX_R * Math.cos(K * offset);
-      const x      = cx + r * Math.cos(theta);
-      const y      = cy + r * Math.sin(theta);
+      const r = MAX_R * Math.cos(K * offset);
+      const x = cx + r * Math.cos(theta);
+      const y = cy + r * Math.sin(theta);
       // Tamaño mayor en la punta (cos→1) y menor en la base (cos→0)
-      const size   = Math.round(65 + 35 * Math.cos(K * offset));
+      const size = Math.round(65 + 35 * Math.cos(K * offset));
       slots.push(
-        makeSlot(x, y, (theta / DEG + 360) % 360, p, j, size, p * PER_PETAL + j),
+        makeSlot(
+          x,
+          y,
+          (theta / DEG + 360) % 360,
+          p,
+          j,
+          size,
+          p * PER_PETAL + j,
+        ),
       );
     }
   }
@@ -496,10 +504,10 @@ export function computeKochLayout(config) {
   const pool = buildImagePool(config);
   const minDim = Math.min(config.canvas.width, config.canvas.height);
 
-  const R          = minDim * 0.38; // circunradio del triángulo inicial
-  const ITERATIONS = 2;             // 3 × 4² = 48 vértices
-  const COS60      = 0.5;
-  const SIN60      = Math.sqrt(3) / 2;
+  const R = minDim * 0.38; // circunradio del triángulo inicial
+  const ITERATIONS = 2; // 3 × 4² = 48 vértices
+  const COS60 = 0.5;
+  const SIN60 = Math.sqrt(3) / 2;
 
   // Triángulo equilátero inicial en sentido antihorario (CCW), vértice superior en -90°
   let pts = [0, 1, 2].map((i) => {
@@ -510,14 +518,14 @@ export function computeKochLayout(config) {
   for (let iter = 0; iter < ITERATIONS; iter++) {
     const next = [];
     for (let i = 0; i < pts.length; i++) {
-      const p  = pts[i];
-      const q  = pts[(i + 1) % pts.length];
+      const p = pts[i];
+      const q = pts[(i + 1) % pts.length];
       const dx = (q.x - p.x) / 3;
       const dy = (q.y - p.y) / 3;
-      const A  = { x: p.x + dx,       y: p.y + dy };
-      const B  = { x: p.x + 2 * dx,   y: p.y + 2 * dy };
+      const A = { x: p.x + dx, y: p.y + dy };
+      const B = { x: p.x + 2 * dx, y: p.y + 2 * dy };
       // Rotar (dx, dy) -60° (sentido horario) → vértice del triángulo exterior
-      const C  = {
+      const C = {
         x: A.x + dx * COS60 + dy * SIN60,
         y: A.y - dx * SIN60 + dy * COS60,
       };
@@ -528,10 +536,162 @@ export function computeKochLayout(config) {
 
   // Cada vértice del perímetro = un slot; orden secuencial recorre el copo
   const slots = pts.map((pt, i) => {
-    const dist     = Math.hypot(pt.x - cx, pt.y - cy);
+    const dist = Math.hypot(pt.x - cx, pt.y - cy);
     const angleDeg = (Math.atan2(pt.y - cy, pt.x - cx) / DEG + 360) % 360;
     // Vértices exteriores (puntas) → imagen más grande; interiores → más pequeña
-    const size     = Math.max(38, Math.min(68, Math.round(38 + 32 * (dist / R))));
+    const size = Math.max(38, Math.min(68, Math.round(38 + 32 * (dist / R))));
+    return makeSlot(pt.x, pt.y, angleDeg, 0, i, size, i);
+  });
+
+  return assignImages(slots, pool);
+}
+
+// ─── 11. TRIANGULAR ───────────────────────────────────────────────────────────
+//
+// Cuadrícula baricéntrica dentro de un triángulo equilátero.
+// Cada slot es una combinación convexa de los tres vértices del triángulo:
+//   p(i,j) = (k·V₀ + i·V₁ + j·V₂) / N   donde k = N − i − j
+//
+// La malla cubre toda la región triangular de forma uniforme.
+// Simetría 3-fold y borde triangular, genuinamente distinto de:
+//   • Flor (celdas hexagonales, borde hexagonal, 6-fold)
+//   • Diamante (distancia Manhattan, borde rombo, 4-fold)
+//   • Triskelion (brazos espirales, 3-fold pero sin malla)
+//
+// Slots: (N+1)(N+2)/2 = (7+1)(7+2)/2 = 36 para N=7
+
+export function computeTriangularLayout(config) {
+  const cx = config.canvas.width / 2;
+  const cy = config.canvas.height / 2;
+  const pool = buildImagePool(config);
+  const minDim = Math.min(config.canvas.width, config.canvas.height);
+
+  const N = 7; // subdivisiones → 36 puntos de malla
+  const R = minDim * 0.42; // circunradio del triángulo exterior
+
+  // Vértices del triángulo equilátero (CCW, vértice superior en -90°)
+  const V = [0, 1, 2].map((k) => {
+    const a = -Math.PI / 2 + (k * 2 * Math.PI) / 3;
+    return { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) };
+  });
+
+  // Generar todos los puntos de la malla baricéntrica
+  const pts = [];
+  for (let i = 0; i <= N; i++) {
+    for (let j = 0; j <= N - i; j++) {
+      const k = N - i - j;
+      const px = (k * V[0].x + i * V[1].x + j * V[2].x) / N;
+      const py = (k * V[0].y + i * V[1].y + j * V[2].y) / N;
+      const dist = Math.hypot(px - cx, py - cy);
+      pts.push({
+        px,
+        py,
+        dist,
+        angleDeg: (Math.atan2(py - cy, px - cx) / DEG + 360) % 360,
+      });
+    }
+  }
+
+  // Ordenar: del centro hacia el borde (imágenes más grandes al centro)
+  pts.sort((a, b) => a.dist - b.dist || a.angleDeg - b.angleDeg);
+
+  const slots = pts.map((p, i) => {
+    const size = Math.max(40, Math.round(105 - 60 * (p.dist / R)));
+    return makeSlot(p.px, p.py, p.angleDeg, 0, i, size, i);
+  });
+
+  return assignImages(slots, pool);
+}
+
+// ─── 12. ARQUÍMEDES ───────────────────────────────────────────────────────────
+//
+// Espiral de Arquímedes pura: r = MAX_R · (θ / θ_max)
+// El espaciado entre brazos es CONSTANTE (a diferencia de la espiral áurea
+// de Fibonacci, cuyo espaciado crece, o del Triskelion, que usa 3 brazos cortos).
+// Con TURNS=4 vueltas y 55 slots se obtiene una espiral densa que cubre
+// el canvas de forma uniforme en una sola trayectoria continua.
+
+export function computeArquimedesLayout(config) {
+  const cx = config.canvas.width / 2;
+  const cy = config.canvas.height / 2;
+  const pool = buildImagePool(config);
+  const minDim = Math.min(config.canvas.width, config.canvas.height);
+
+  const N = 55; // slots totales
+  const TURNS = 4; // vueltas completas
+  const MAX_R = minDim * 0.44;
+  const MIN_R = minDim * 0.03; // desplazamiento mínimo para evitar apilar en (0,0)
+
+  const slots = [];
+  for (let i = 0; i < N; i++) {
+    const t = i / (N - 1); // 0..1
+    const angle = t * TURNS * 2 * Math.PI;
+    const r = MIN_R + (MAX_R - MIN_R) * t; // r proporcional al ángulo
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    const size = Math.round(110 - 62 * t); // decrece del centro al borde
+    slots.push(
+      makeSlot(x, y, (((angle / DEG) % 360) + 360) % 360, 0, i, size, i),
+    );
+  }
+
+  return assignImages(slots, pool);
+}
+
+// ─── 13. SIERPINSKI ───────────────────────────────────────────────────────────
+//
+// Triángulo de Sierpinski, profundidad 3 → 3³ = 27 sub-triángulos.
+// Algoritmo recursivo: dividir el triángulo en 4 sub-triángulos y descartar
+// el central (el "agujero"). Las imágenes se colocan en los centroides de los
+// 27 sub-triángulos supervivientes a profundidad 3.
+//
+// El orden de entrada sigue la subdivisión recursiva:
+//   primero esquina V₀ (arriba), luego V₁ (inferior-derecha), luego V₂ (inferior-izquierda).
+// Esto produce una animación que "llena" el fractal esquina a esquina.
+
+export function computeSierpinskiLayout(config) {
+  const cx = config.canvas.width / 2;
+  const cy = config.canvas.height / 2;
+  const pool = buildImagePool(config);
+  const minDim = Math.min(config.canvas.width, config.canvas.height);
+
+  const R = minDim * 0.42; // circunradio del triángulo inicial
+  const DEPTH = 3; // 3^3 = 27 sub-triángulos
+
+  // Triángulo inicial CCW, vértice superior en -90°
+  const root = [0, 1, 2].map((k) => {
+    const a = -Math.PI / 2 + (k * 2 * Math.PI) / 3;
+    return { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) };
+  });
+
+  const leaves = [];
+
+  function subdivide(A, B, C, depth) {
+    if (depth === 0) {
+      // Centroide del sub-triángulo superviviente
+      leaves.push({
+        x: (A.x + B.x + C.x) / 3,
+        y: (A.y + B.y + C.y) / 3,
+        // Tamaño proporcional al lado del sub-triángulo en este nivel
+        side: Math.hypot(B.x - A.x, B.y - A.y),
+      });
+      return;
+    }
+    const AB = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
+    const BC = { x: (B.x + C.x) / 2, y: (B.y + C.y) / 2 };
+    const CA = { x: (C.x + A.x) / 2, y: (C.y + A.y) / 2 };
+    // Los 3 sub-triángulos que SOBREVIVEN (el central se descarta)
+    subdivide(A, AB, CA, depth - 1); // esquina A
+    subdivide(AB, B, BC, depth - 1); // esquina B
+    subdivide(CA, BC, C, depth - 1); // esquina C
+  }
+
+  subdivide(root[0], root[1], root[2], DEPTH);
+
+  const slots = leaves.map((pt, i) => {
+    const angleDeg = (Math.atan2(pt.y - cy, pt.x - cx) / DEG + 360) % 360;
+    // Lado del sub-triángulo en depth=3 = R·√3 / 2^3; imágenes caben dentro
+    const size = Math.max(36, Math.min(70, Math.round(pt.side * 0.7)));
     return makeSlot(pt.x, pt.y, angleDeg, 0, i, size, i);
   });
 
@@ -552,18 +712,73 @@ export function computeKochLayout(config) {
 
 export const PATTERN_REGISTRY = {
   // ── Clásicos ────────────────────────────────────────────────────────────
-  circular:   { label: "Circular",             category: "Clásicos",    fn: null                    },
-  espiral:    { label: "Espiral áurea",         category: "Clásicos",    fn: computeEspiralLayout    },
-  estrella:   { label: "Estrella entrelazada",  category: "Clásicos",    fn: computeEstrellaLayout   },
-  flor:       { label: "Flor de la vida",       category: "Clásicos",    fn: computeFlorLayout       },
-  cuadricula: { label: "Cuadrícula sagrada",    category: "Clásicos",    fn: computeCuadriculaLayout },
+  circular: { label: "Circular", category: "Clásicos", fn: null },
+  espiral: {
+    label: "Espiral áurea",
+    category: "Clásicos",
+    fn: computeEspiralLayout,
+  },
+  estrella: {
+    label: "Estrella entrelazada",
+    category: "Clásicos",
+    fn: computeEstrellaLayout,
+  },
+  flor: {
+    label: "Flor de la vida",
+    category: "Clásicos",
+    fn: computeFlorLayout,
+  },
+  cuadricula: {
+    label: "Cuadrícula sagrada",
+    category: "Clásicos",
+    fn: computeCuadriculaLayout,
+  },
   // ── Geométricos ──────────────────────────────────────────────────────────
-  pentagono:  { label: "Pentagonal",            category: "Geométricos", fn: computePentagonoLayout  },
-  triskelion: { label: "Triskelion",            category: "Geométricos", fn: computeTriskelionLayout },
-  diamante:   { label: "Diamante",              category: "Geométricos", fn: computeDiamanteLayout   },
+  pentagono: {
+    label: "Pentagonal",
+    category: "Geométricos",
+    fn: computePentagonoLayout,
+  },
+  triskelion: {
+    label: "Triskelion",
+    category: "Geométricos",
+    fn: computeTriskelionLayout,
+  },
+  diamante: {
+    label: "Diamante",
+    category: "Geométricos",
+    fn: computeDiamanteLayout,
+  },
+  triangular: {
+    label: "Triangular",
+    category: "Geométricos",
+    fn: computeTriangularLayout,
+  },
   // ── Curvas ───────────────────────────────────────────────────────────────
-  lissajous:  { label: "Lissajous 3:2",         category: "Curvas",      fn: computeLissajousLayout  },
-  rosa:       { label: "Rosa (5 pétalos)",       category: "Curvas",      fn: computeRosaLayout       },
+  lissajous: {
+    label: "Lissajous 3:2",
+    category: "Curvas",
+    fn: computeLissajousLayout,
+  },
+  rosa: {
+    label: "Rosa (5 pétalos)",
+    category: "Curvas",
+    fn: computeRosaLayout,
+  },
+  arquimedes: {
+    label: "Arquímedes",
+    category: "Curvas",
+    fn: computeArquimedesLayout,
+  },
   // ── Fractales ────────────────────────────────────────────────────────────
-  koch:       { label: "Koch (fractal)",         category: "Fractales",   fn: computeKochLayout       },
+  koch: {
+    label: "Koch (fractal)",
+    category: "Fractales",
+    fn: computeKochLayout,
+  },
+  sierpinski: {
+    label: "Sierpinski (fractal)",
+    category: "Fractales",
+    fn: computeSierpinskiLayout,
+  },
 };

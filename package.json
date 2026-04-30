@@ -4,13 +4,20 @@
   "description": "Animación de mandala con imágenes, exportable a video Full HD",
   "private": true,
   "dependencies": {
-    "p5": "1.9.4",
-    "ccapture.js": "1.1.0"
+    "ccapture.js": "1.1.0",
+    "p5": "1.9.4"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "engines": {
     "node": ">=16"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.4",
+    "vitest": "^4.1.4"
   }
 }

@@ -11,6 +11,8 @@ Animated mandala generator built with p5.js and CCapture.js, exportable to Full 
 - **Full HD output** — 1920×1080 canvas at 60fps
 - **Security-first** — Strict CSP, no external CDN dependencies, path traversal protection
 
+For a detailed per-file feature breakdown and future roadmap, see [FEATURE.md](FEATURE.md).
+
 ## Requirements
 
 - Node.js ≥ 16

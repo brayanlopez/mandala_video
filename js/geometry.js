@@ -21,10 +21,11 @@ import { PATTERN_REGISTRY } from "./geometry-patterns.js";
  * @returns {MandalaSlot[]}
  */
 export function computeLayout(patternName, config) {
-  if (patternName === "circular" || !PATTERN_REGISTRY[patternName]) {
-    return computeMandalaLayout(config);
+  const entry = PATTERN_REGISTRY[patternName];
+  if (!entry || !entry.fn) {
+    return computeMandalaLayout(config); // circular o patrón desconocido → anillos por defecto
   }
-  return PATTERN_REGISTRY[patternName](config);
+  return entry.fn(config);
 }
 
 /**

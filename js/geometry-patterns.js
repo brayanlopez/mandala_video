@@ -4,17 +4,29 @@
  * Cada función recibe (config) y devuelve MandalaSlot[].
  * Ninguna función sabe de renderizado — solo producen coordenadas (x, y).
  *
- * Para agregar un nuevo patrón:
- *   1. Escribir la función computeXxxLayout(config) → MandalaSlot[]
- *   2. Agregarla al objeto PATTERN_REGISTRY al final del archivo
- *   3. Agregar la <option> correspondiente en index.html
+ * Para agregar un nuevo patrón (solo este archivo):
+ *   1. Escribir computeXxxLayout(config) → MandalaSlot[]
+ *   2. Agregar la entrada en PATTERN_REGISTRY al final del archivo
+ *      (label, category, fn)
  *
- * Patrones disponibles:
+ * Patrones disponibles — Clásicos:
  *   circular    → Anillos concéntricos (delegado a geometry.js)
  *   espiral     → Espiral áurea (ángulo dorado de Fibonacci)
  *   estrella    → Hexágonos entrelazados / Estrella de David anidada
  *   flor        → Flor de la vida (cuadrícula hexagonal)
  *   cuadricula  → Cuadrícula sagrada (cuadrados rotados anidados)
+ *
+ * Patrones disponibles — Geométricos:
+ *   pentagono   → Geometría sagrada 5-fold (pentágonos + estrella)
+ *   triskelion  → Tres brazos de espiral archimediana (3-fold)
+ *   diamante    → Cuadrícula ortogonal acotada por distancia Manhattan
+ *
+ * Patrones disponibles — Curvas:
+ *   lissajous   → Curva paramétrica x=sin(3t+δ), y=sin(2t) — sin simetría radial
+ *   rosa        → Curva polar r=cos(5θ): 5 pétalos, entrada pétalo a pétalo
+ *
+ * Patrones disponibles — Fractales:
+ *   koch        → Copo de nieve de Koch iter-2 (48 vértices), traza el perímetro
  */
 
 import { sanitizePath } from "./geometry.js";
@@ -199,12 +211,15 @@ export function computeFlorLayout(config) {
     }
   }
 
+  // Pre-computar ángulos antes del sort para evitar Math.atan2 O(n log n) en el comparador
+  cells.forEach((c) => {
+    c.angle = Math.atan2(c.r, c.q);
+  });
+
   // Ordenar: primero por capa (entrada del centro hacia afuera),
-  // luego por ángulo dentro de la capa para entrada en espiral
+  // luego por ángulo pre-computado dentro de la capa para entrada en espiral
   cells.sort((a, b) =>
-    a.layer !== b.layer
-      ? a.layer - b.layer
-      : Math.atan2(a.r, a.q) - Math.atan2(b.r, b.q),
+    a.layer !== b.layer ? a.layer - b.layer : a.angle - b.angle,
   );
 
   const slots = cells.map((cell, i) => {
@@ -260,11 +275,295 @@ export function computeCuadriculaLayout(config) {
   return assignImages(slots, pool);
 }
 
+// ─── 5. PENTAGONAL ───────────────────────────────────────────────────────────
+//
+// Geometría sagrada de 5 lados: pentágonos y estrella de 5 puntas anidados.
+// Cada par de grupos al mismo radio (desplazados 36°) forma un decágono
+// que produce el efecto de estrella pentagonal entrelazada.
+// Simetría 5-fold, completamente distinta a los patrones hexagonales (6-fold)
+// y octagonales (8-fold) existentes.
+
+export function computePentagonoLayout(config) {
+  const cx = config.canvas.width / 2;
+  const cy = config.canvas.height / 2;
+  const pool = buildImagePool(config);
+  const minDim = Math.min(config.canvas.width, config.canvas.height);
+
+  // [count, radius_factor, startDeg, imgSize]
+  // Offset de 36° entre grupos pares/impares crea la estrella de 5 puntas.
+  const groups = [
+    [1, 0, 0, 130], // centro
+    [5, 0.145, 0, 108], // pentágono interior
+    [5, 0.145, 36, 108], // estrella interior (rotada 36°)
+    [10, 0.255, 18, 88], // decágono combinado (10 puntos alternados)
+    [5, 0.355, 0, 76], // pentágono medio
+    [5, 0.355, 36, 74], // estrella media
+    [10, 0.425, 18, 64], // decágono exterior
+    [5, 0.485, 0, 58], // corona exterior
+  ];
+
+  const slots = [];
+  groups.forEach(([count, rFactor, startDeg, imgSize], ringIdx) => {
+    const r = minDim * rFactor;
+    const offset = slots.length;
+    ring(cx, cy, count, r, startDeg, imgSize, ringIdx, offset).forEach((s) =>
+      slots.push(s),
+    );
+  });
+
+  return assignImages(slots, pool);
+}
+
+// ─── 6. TRISKELION ───────────────────────────────────────────────────────────
+//
+// Tres brazos de espiral archimediana, desfasados 120° entre sí.
+// El orden de entrada es intercalado: los 3 brazos crecen simultáneamente
+// durante la animación, creando el efecto visual del símbolo triskelion.
+// Simetría 3-fold — la única con esa simetría en el conjunto.
+
+export function computeTriskelionLayout(config) {
+  const cx = config.canvas.width / 2;
+  const cy = config.canvas.height / 2;
+  const pool = buildImagePool(config);
+  const minDim = Math.min(config.canvas.width, config.canvas.height);
+
+  const ARMS = 3;
+  const PER_ARM = 18;
+  const MIN_R = minDim * 0.06; // radio mínimo (evita apilar en el centro)
+  const MAX_R = minDim * 0.44;
+  const TURNS = 0.75; // fracción de vuelta por brazo (270°)
+
+  const slots = [];
+
+  // Bucle externo por posición para que el entranceOrder sea intercalado:
+  // los 3 brazos aparecen en paralelo durante la animación.
+  for (let i = 0; i < PER_ARM; i++) {
+    const t = i / (PER_ARM - 1); // 0..1
+    for (let arm = 0; arm < ARMS; arm++) {
+      const offsetRad = (arm * 2 * Math.PI) / ARMS; // 0°, 120°, 240°
+      const angle = offsetRad + t * TURNS * 2 * Math.PI;
+      const radius = MIN_R + (MAX_R - MIN_R) * t;
+      const size = Math.round(110 - 55 * t);
+      slots.push(
+        makeSlot(
+          cx + Math.cos(angle) * radius,
+          cy + Math.sin(angle) * radius,
+          (((angle / DEG) % 360) + 360) % 360,
+          arm,
+          i,
+          size,
+          i * ARMS + arm, // entranceOrder intercalado
+        ),
+      );
+    }
+  }
+
+  return assignImages(slots, pool);
+}
+
+// ─── 7. DIAMANTE ─────────────────────────────────────────────────────────────
+//
+// Cuadrícula ortogonal acotada por distancia Manhattan: |q| + |r| ≤ MAX_LAYER.
+// El área resultante tiene forma de diamante/rombo con simetría 4-fold.
+// A diferencia de cuadricula (cuadrados rotados anidados) o flor (hex),
+// este patrón es una grilla rectangular pura con forma exterior de diamante.
+//
+// Capas: 0(1) → 1(4) → 2(8) → 3(12) → 4(16) = 41 slots totales
+
+export function computeDiamanteLayout(config) {
+  const cx = config.canvas.width / 2;
+  const cy = config.canvas.height / 2;
+  const pool = buildImagePool(config);
+  const minDim = Math.min(config.canvas.width, config.canvas.height);
+  const spacing = minDim * 0.115;
+
+  const MAX_LAYER = 4;
+  const SIZE_BY_LAYER = [120, 96, 78, 64, 52];
+
+  const cells = [];
+  for (let q = -MAX_LAYER; q <= MAX_LAYER; q++) {
+    for (let r = -MAX_LAYER; r <= MAX_LAYER; r++) {
+      const layer = Math.abs(q) + Math.abs(r); // distancia Manhattan
+      if (layer <= MAX_LAYER) {
+        cells.push({ q, r, layer, angle: Math.atan2(r, q) });
+      }
+    }
+  }
+
+  cells.sort((a, b) =>
+    a.layer !== b.layer ? a.layer - b.layer : a.angle - b.angle,
+  );
+
+  const slots = cells.map((cell, i) => {
+    const px = cx + spacing * cell.q;
+    const py = cy + spacing * cell.r;
+    const angleDeg = (cell.angle / DEG + 360) % 360;
+    const imgSize =
+      SIZE_BY_LAYER[Math.min(cell.layer, SIZE_BY_LAYER.length - 1)];
+    return makeSlot(px, py, angleDeg, cell.layer, i, imgSize, i);
+  });
+
+  return assignImages(slots, pool);
+}
+
+// ─── 8. LISSAJOUS ────────────────────────────────────────────────────────────
+//
+// Curva paramétrica de Lissajous: x(t) = A·sin(a·t + δ), y(t) = B·sin(b·t)
+// Con a=3, b=2 se obtiene una figura cerrada de tipo "mariposa".
+// Es el único patrón sin simetría radial: las imágenes siguen la curva,
+// no parten del centro. La animación traza la curva de punta a punta.
+
+export function computeLissajousLayout(config) {
+  const cx = config.canvas.width / 2;
+  const cy = config.canvas.height / 2;
+  const pool = buildImagePool(config);
+  const minDim = Math.min(config.canvas.width, config.canvas.height);
+
+  const A     = minDim * 0.38;   // amplitud en X
+  const B     = minDim * 0.38;   // amplitud en Y
+  const a     = 3;               // frecuencia X
+  const b     = 2;               // frecuencia Y  →  relación 3:2 = figura mariposa
+  const DELTA = Math.PI / 4;     // desfase de fase (evita auto-intersección en t=0)
+  const N     = 48;
+
+  const slots = [];
+  for (let i = 0; i < N; i++) {
+    const t      = (i / N) * 2 * Math.PI;
+    const x      = cx + A * Math.sin(a * t + DELTA);
+    const y      = cy + B * Math.sin(b * t);
+    const angle  = ((a * t + DELTA) / DEG + 360) % 360;
+    slots.push(makeSlot(x, y, angle, 0, i, 65, i));
+  }
+
+  return assignImages(slots, pool);
+}
+
+// ─── 9. ROSA ─────────────────────────────────────────────────────────────────
+//
+// Curva polar r = cos(k·θ), k=5 → 5 pétalos equidistantes a 72°.
+// Imágenes muestreadas directamente a lo largo de cada pétalo, con tamaño
+// máximo en la punta (r = MAX_R) y mínimo en la base (r → 0).
+// Entrada animada pétalo a pétalo: el primer pétalo florece completo,
+// luego el segundo, etc.
+
+export function computeRosaLayout(config) {
+  const cx = config.canvas.width / 2;
+  const cy = config.canvas.height / 2;
+  const pool = buildImagePool(config);
+  const minDim = Math.min(config.canvas.width, config.canvas.height);
+
+  const K         = 5;                      // pétalos (k impar → k pétalos)
+  const PER_PETAL = 9;                      // imágenes por pétalo
+  const MAX_R     = minDim * 0.43;
+  const HALF_W    = Math.PI / (2 * K);      // semi-ancho angular del pétalo
+
+  const slots = [];
+  for (let p = 0; p < K; p++) {
+    const thetaTip = (2 * Math.PI * p) / K; // ángulo de la punta del pétalo
+    for (let j = 0; j < PER_PETAL; j++) {
+      const frac   = (j + 0.5) / PER_PETAL; // 0..1 a lo largo del pétalo
+      const offset = (frac - 0.5) * 2 * HALF_W; // -HALF_W .. +HALF_W
+      const theta  = thetaTip + offset;
+      // r = MAX_R·cos(K·offset): máximo en la punta (offset=0), 0 en la base (|offset|=HALF_W)
+      const r      = MAX_R * Math.cos(K * offset);
+      const x      = cx + r * Math.cos(theta);
+      const y      = cy + r * Math.sin(theta);
+      // Tamaño mayor en la punta (cos→1) y menor en la base (cos→0)
+      const size   = Math.round(65 + 35 * Math.cos(K * offset));
+      slots.push(
+        makeSlot(x, y, (theta / DEG + 360) % 360, p, j, size, p * PER_PETAL + j),
+      );
+    }
+  }
+
+  return assignImages(slots, pool);
+}
+
+// ─── 10. KOCH ─────────────────────────────────────────────────────────────────
+//
+// Copo de nieve de Koch, 2 iteraciones → 3·4² = 48 vértices.
+// Algoritmo: se parte de un triángulo equilátero CCW; cada segmento se
+// sustituye por 4 subsegmentos con un triángulo apuntando hacia afuera
+// (rotando el tercio medio -60° respecto al sentido de recorrido).
+//
+// Es el ÚNICO patrón cuyas imágenes recorren el BORDE EXTERIOR desde el
+// primer slot: la animación dibuja progresivamente el perímetro fractal.
+// Sin imagen central — todas las imágenes están en la corona exterior.
+
+export function computeKochLayout(config) {
+  const cx = config.canvas.width / 2;
+  const cy = config.canvas.height / 2;
+  const pool = buildImagePool(config);
+  const minDim = Math.min(config.canvas.width, config.canvas.height);
+
+  const R          = minDim * 0.38; // circunradio del triángulo inicial
+  const ITERATIONS = 2;             // 3 × 4² = 48 vértices
+  const COS60      = 0.5;
+  const SIN60      = Math.sqrt(3) / 2;
+
+  // Triángulo equilátero inicial en sentido antihorario (CCW), vértice superior en -90°
+  let pts = [0, 1, 2].map((i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / 3;
+    return { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) };
+  });
+
+  for (let iter = 0; iter < ITERATIONS; iter++) {
+    const next = [];
+    for (let i = 0; i < pts.length; i++) {
+      const p  = pts[i];
+      const q  = pts[(i + 1) % pts.length];
+      const dx = (q.x - p.x) / 3;
+      const dy = (q.y - p.y) / 3;
+      const A  = { x: p.x + dx,       y: p.y + dy };
+      const B  = { x: p.x + 2 * dx,   y: p.y + 2 * dy };
+      // Rotar (dx, dy) -60° (sentido horario) → vértice del triángulo exterior
+      const C  = {
+        x: A.x + dx * COS60 + dy * SIN60,
+        y: A.y - dx * SIN60 + dy * COS60,
+      };
+      next.push(p, A, C, B);
+    }
+    pts = next;
+  }
+
+  // Cada vértice del perímetro = un slot; orden secuencial recorre el copo
+  const slots = pts.map((pt, i) => {
+    const dist     = Math.hypot(pt.x - cx, pt.y - cy);
+    const angleDeg = (Math.atan2(pt.y - cy, pt.x - cx) / DEG + 360) % 360;
+    // Vértices exteriores (puntas) → imagen más grande; interiores → más pequeña
+    const size     = Math.max(38, Math.min(68, Math.round(38 + 32 * (dist / R))));
+    return makeSlot(pt.x, pt.y, angleDeg, 0, i, size, i);
+  });
+
+  return assignImages(slots, pool);
+}
+
 // ─── Registry de patrones ─────────────────────────────────────────────────────
+//
+// ÚNICA FUENTE DE VERDAD para los patrones disponibles.
+// Cada entrada tiene:
+//   label    → texto legible para la UI
+//   category → agrupa las opciones del <select> con <optgroup>
+//   fn       → función de layout, o null para circular (fallback a computeMandalaLayout)
+//
+// Para agregar un nuevo patrón (solo este archivo):
+//   1. Escribir computeXxxLayout(config) → MandalaSlot[]
+//   2. Agregar la entrada aquí con label, category y fn
 
 export const PATTERN_REGISTRY = {
-  espiral: computeEspiralLayout,
-  estrella: computeEstrellaLayout,
-  flor: computeFlorLayout,
-  cuadricula: computeCuadriculaLayout,
+  // ── Clásicos ────────────────────────────────────────────────────────────
+  circular:   { label: "Circular",             category: "Clásicos",    fn: null                    },
+  espiral:    { label: "Espiral áurea",         category: "Clásicos",    fn: computeEspiralLayout    },
+  estrella:   { label: "Estrella entrelazada",  category: "Clásicos",    fn: computeEstrellaLayout   },
+  flor:       { label: "Flor de la vida",       category: "Clásicos",    fn: computeFlorLayout       },
+  cuadricula: { label: "Cuadrícula sagrada",    category: "Clásicos",    fn: computeCuadriculaLayout },
+  // ── Geométricos ──────────────────────────────────────────────────────────
+  pentagono:  { label: "Pentagonal",            category: "Geométricos", fn: computePentagonoLayout  },
+  triskelion: { label: "Triskelion",            category: "Geométricos", fn: computeTriskelionLayout },
+  diamante:   { label: "Diamante",              category: "Geométricos", fn: computeDiamanteLayout   },
+  // ── Curvas ───────────────────────────────────────────────────────────────
+  lissajous:  { label: "Lissajous 3:2",         category: "Curvas",      fn: computeLissajousLayout  },
+  rosa:       { label: "Rosa (5 pétalos)",       category: "Curvas",      fn: computeRosaLayout       },
+  // ── Fractales ────────────────────────────────────────────────────────────
+  koch:       { label: "Koch (fractal)",         category: "Fractales",   fn: computeKochLayout       },
 };

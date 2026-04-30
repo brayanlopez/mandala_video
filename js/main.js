@@ -13,6 +13,7 @@
 
 import { CONFIG } from "../config.js";
 import { computeLayout } from "./geometry.js";
+import { PATTERN_REGISTRY } from "./geometry-patterns.js";
 import { P5Renderer } from "./renderer-p5.js";
 import { Animator } from "./animator.js";
 import { Exporter } from "./exporter.js";
@@ -33,6 +34,17 @@ const UI = {
   statusText: $("status-text"),
   effectSelect: $("effect-select"),
   patternSelect: $("pattern-select"),
+  // New settings controls
+  bgColorInput: $("bg-color-input"),
+  rotationSlider: $("rotation-slider"),
+  rotationLabel: $("rotation-label"),
+  staggerSlider: $("stagger-slider"),
+  staggerLabel: $("stagger-label"),
+  durationSlider: $("duration-slider"),
+  durationLabel: $("duration-label"),
+  loopCheckbox: $("loop-checkbox"),
+  fpsSelect: $("fps-select"),
+  captureSelect: $("capture-select"),
 };
 
 // ─── Estado de la app ─────────────────────────────────────────────────────
@@ -49,6 +61,22 @@ let currentPattern = "circular";
 // ─── Inicialización ───────────────────────────────────────────────────────
 
 async function init() {
+  // Poblar el selector con <optgroup> por categoría — única fuente de verdad: PATTERN_REGISTRY
+  const categoryGroups = {};
+  Object.entries(PATTERN_REGISTRY).forEach(([key, { label, category }]) => {
+    if (!Object.hasOwn(categoryGroups, category)) {
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = category; // textContent no aplica a optgroup; label es el atributo correcto
+      categoryGroups[category] = optgroup;
+      UI.patternSelect.appendChild(optgroup);
+    }
+    const option = document.createElement("option");
+    option.value = key;
+    option.textContent = label; // textContent — nunca innerHTML (CWE-79)
+    if (key === currentPattern) option.selected = true;
+    categoryGroups[category].appendChild(option);
+  });
+
   setStatus("Calculando layout…");
 
   // 1. Calcular posiciones con el patrón inicial
@@ -120,7 +148,7 @@ async function switchPattern(patternName) {
 
   const loaded = images.filter(Boolean).length;
   setStatus(
-    `${PATTERN_LABELS[patternName] || patternName} — ${loaded}/${slots.length} imágenes.`,
+    `${PATTERN_REGISTRY[patternName]?.label ?? patternName} — ${loaded}/${slots.length} imágenes.`,
   );
 
   // Reinstanciar animator y exporter con los nuevos slots
@@ -129,15 +157,6 @@ async function switchPattern(patternName) {
 
   startPreview();
 }
-
-// Nombres legibles para el status
-const PATTERN_LABELS = {
-  circular: "Circular",
-  espiral: "Espiral Áurea",
-  estrella: "Estrella Entrelazada",
-  flor: "Flor de la Vida",
-  cuadricula: "Cuadrícula Sagrada",
-};
 
 // ─── Carga de imágenes ────────────────────────────────────────────────────
 
@@ -172,6 +191,9 @@ async function runExport() {
 
   UI.btnExport.disabled = true;
   UI.btnPlay.disabled = true;
+  UI.staggerSlider.disabled = true;
+  UI.durationSlider.disabled = true;
+  UI.bgColorInput.disabled = true;
   UI.progressWrap.classList.add("is-exporting");
   document.dispatchEvent(new CustomEvent("mandala:export-start"));
 
@@ -187,6 +209,9 @@ async function runExport() {
       isExporting = false;
       UI.btnExport.disabled = false;
       UI.btnPlay.disabled = false;
+      UI.staggerSlider.disabled = false;
+      UI.durationSlider.disabled = false;
+      UI.bgColorInput.disabled = false;
       UI.progressWrap.classList.remove("is-exporting");
       setStatus("✅ Video descargado. Revisá tu carpeta de descargas.");
       document.dispatchEvent(new CustomEvent("mandala:export-end"));
@@ -276,11 +301,60 @@ function bindControls() {
   // ── Selector de patrón de mandala ────────────────────────────────────────
   UI.patternSelect.addEventListener("change", () => {
     if (isExporting) return;
-    // Validar que el valor sea uno de los patrones conocidos (allowlist)
-    const allowed = ["circular", "espiral", "estrella", "flor", "cuadricula"];
+    // Allowlist derivada del PATTERN_REGISTRY — fuente única de verdad
     const selected = UI.patternSelect.value;
-    if (!allowed.includes(selected)) return; // ignorar valores no esperados
+    if (!Object.hasOwn(PATTERN_REGISTRY, selected)) return; // ignorar valores no esperados
     switchPattern(selected);
+  });
+
+  // ── Color de fondo (efecto inmediato — el renderer lo lee en cada frame) ──
+  UI.bgColorInput.addEventListener("input", () => {
+    CONFIG.canvas.bgColor = UI.bgColorInput.value; // textContent no aplica, input.value es seguro aquí
+  });
+
+  // ── Velocidad de rotación (efecto inmediato) ──────────────────────────────
+  UI.rotationSlider.addEventListener("input", () => {
+    const val = parseFloat(UI.rotationSlider.value);
+    CONFIG.animation.rotationSpeed = val;
+    UI.rotationLabel.textContent = val.toFixed(3);
+  });
+
+  // ── Stagger delay (requiere reinicio para consistencia visual) ────────────
+  UI.staggerSlider.addEventListener("change", () => {
+    if (isExporting) return;
+    const val = parseInt(UI.staggerSlider.value, 10);
+    CONFIG.animation.staggerDelay = val;
+    UI.staggerLabel.textContent = `${val}ms`;
+    animator.reset();
+    startPreview();
+  });
+
+  // ── Duración de entrada (requiere reinicio para consistencia visual) ──────
+  UI.durationSlider.addEventListener("change", () => {
+    if (isExporting) return;
+    const val = parseInt(UI.durationSlider.value, 10);
+    CONFIG.animation.entryDuration = val;
+    UI.durationLabel.textContent = `${val}ms`;
+    animator.reset();
+    startPreview();
+  });
+
+  // ── Loop (efecto inmediato — lo lee _tick en cada frame) ──────────────────
+  UI.loopCheckbox.addEventListener("change", () => {
+    CONFIG.animation.loopAnimation = UI.loopCheckbox.checked;
+  });
+
+  // ── FPS de exportación (solo aplica al exportar) ──────────────────────────
+  UI.fpsSelect.addEventListener("change", () => {
+    CONFIG.canvas.fps = parseInt(UI.fpsSelect.value, 10);
+  });
+
+  // ── Modo de captura (solo aplica al exportar) ─────────────────────────────
+  UI.captureSelect.addEventListener("change", () => {
+    const allowed = ["ccapture", "mediarecorder"];
+    const selected = UI.captureSelect.value;
+    if (!allowed.includes(selected)) return;
+    CONFIG.export.captureMode = selected;
   });
 }
 

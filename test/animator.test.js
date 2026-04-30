@@ -53,6 +53,13 @@ function makeSlots(count = 3) {
 // ─── Estado inicial ───────────────────────────────────────────────────────────
 
 describe("Animator — estado inicial", () => {
+  test("_cx y _cy quedan precalculados desde config.canvas en el constructor", () => {
+    const config = makeConfig()
+    const animator = new Animator(makeRenderer(), makeSlots(1), [null], config)
+    expect(animator._cx).toBe(config.canvas.width / 2)
+    expect(animator._cy).toBe(config.canvas.height / 2)
+  })
+
   test("elapsed comienza en 0", () => {
     const animator = new Animator(
       makeRenderer(),

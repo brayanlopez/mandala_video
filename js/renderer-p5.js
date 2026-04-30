@@ -26,6 +26,8 @@ export class P5Renderer {
     /** @type {Array<object>} Cola de comandos de dibujo del frame actual */
     this._drawQueue = [];
     this._ready = false;
+    /** @type {Map<string, Promise<p5.Image|null>>} Caché de imágenes ya cargadas por ruta */
+    this._imageCache = new Map();
   }
 
   /**
@@ -72,8 +74,9 @@ export class P5Renderer {
    */
   loadImage(src) {
     if (!src) return Promise.resolve(null);
+    if (this._imageCache.has(src)) return this._imageCache.get(src);
 
-    return new Promise((resolve, reject) => {
+    const promise = new Promise((resolve) => {
       this._p.loadImage(
         src,
         (img) => resolve(img),
@@ -83,6 +86,9 @@ export class P5Renderer {
         },
       );
     });
+
+    this._imageCache.set(src, promise);
+    return promise;
   }
 
   // ─── Interfaz de dibujo (comandos encolados) ───────────────────────────────
@@ -137,6 +143,7 @@ export class P5Renderer {
     }
     this._canvas = null;
     this._drawQueue = [];
+    this._imageCache.clear();
     this._ready = false;
   }
 

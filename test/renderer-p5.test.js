@@ -197,6 +197,22 @@ describe('P5Renderer.loadImage', () => {
     const result = await r.loadImage('images/ring1/roto.png')
     expect(result).toBeNull()
   })
+
+  test('retorna el mismo Promise para la misma src (caché de imagen)', () => {
+    const r = makeReadyRenderer()
+    const p1 = r.loadImage('images/flower.png')
+    const p2 = r.loadImage('images/flower.png')
+    expect(p1).toBe(p2) // misma referencia — no se llama p5.loadImage dos veces
+    expect(r._p.loadImage).toHaveBeenCalledTimes(1)
+  })
+
+  test('distintas src crean entradas independientes en la caché', () => {
+    const r = makeReadyRenderer()
+    const p1 = r.loadImage('images/a.png')
+    const p2 = r.loadImage('images/b.png')
+    expect(p1).not.toBe(p2)
+    expect(r._p.loadImage).toHaveBeenCalledTimes(2)
+  })
 })
 
 // ─── destroy ─────────────────────────────────────────────────────────────────
@@ -210,6 +226,14 @@ describe('P5Renderer.destroy', () => {
     expect(r._canvas).toBeNull()
     expect(r._drawQueue).toEqual([])
     expect(r._ready).toBe(false)
+  })
+
+  test('limpia la caché de imágenes al destruir', () => {
+    const r = makeReadyRenderer()
+    r._imageCache.set('test.png', Promise.resolve(null))
+    expect(r._imageCache.size).toBe(1)
+    r.destroy()
+    expect(r._imageCache.size).toBe(0)
   })
 
   test('no lanza error si _p ya es null (doble destroy)', () => {

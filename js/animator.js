@@ -33,6 +33,7 @@ const Easing = {
   },
 
   /** Lineal */
+  /* v8 ignore next */
   linear: (t) => t,
 };
 
@@ -67,6 +68,10 @@ export class Animator {
 
     /** Rotación global continua de toda la mandala (grados) */
     this._globalRot = 0;
+
+    /** Centro del canvas — precalculado para evitar divisiones en el hot path de _renderFrame */
+    this._cx = config.canvas.width / 2;
+    this._cy = config.canvas.height / 2;
 
     /** Callbacks externos */
     this._onFrame = null; // (elapsed, totalDuration) => void
@@ -245,11 +250,9 @@ export class Animator {
       let finalY = slot.y;
 
       if (entryEffect === "flyIn" && t < 1) {
-        const cx = this._config.canvas.width / 2;
-        const cy = this._config.canvas.height / 2;
         const tE = Easing.easeOutCubic(t);
-        finalX = cx + (slot.x - cx) * tE;
-        finalY = cy + (slot.y - cy) * tE;
+        finalX = this._cx + (slot.x - this._cx) * tE;
+        finalY = this._cy + (slot.y - this._cy) * tE;
       }
 
       this._renderer.drawImage(

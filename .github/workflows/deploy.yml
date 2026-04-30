@@ -51,8 +51,11 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: 📦 Instalar dependencias
-        run: npm install
+      # npm ci instala exactamente lo que está en package-lock.json (sin upgrades).
+      # Esto garantiza que se use vitest@4.1.4 (o la versión bloqueada) y no
+      # una versión posterior que pueda tener regresiones en file discovery.
+      - name: 📦 Instalar dependencias (ci)
+        run: npm ci
 
       # npm run test:coverage corre los 232 tests Y verifica que los umbrales
       # de cobertura (≥95% en statements, branches, functions y lines) se cumplan.
@@ -77,9 +80,9 @@ jobs:
           node-version: "20"
           cache: "npm" # cachea node_modules entre runs para mayor velocidad
 
-      # npm install descarga Three.js 0.128.0 y CCapture.js 1.1.0
-      - name: 📦 Instalar dependencias
-        run: npm install
+      # npm ci garantiza versiones exactas del lock file (reproducible)
+      - name: 📦 Instalar dependencias (ci)
+        run: npm ci
 
       # Armamos dist/ con exactamente los archivos que necesita el navegador.
       # node_modules/ NO se sube a Pages (es grande y contiene muchos archivos

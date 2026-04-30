@@ -1,11 +1,12 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # Deploy Mandala Animada → GitHub Pages
 #
-# Flujo:
-#   1. npm install      → descarga Three.js y CCapture.js en node_modules/
-#   2. Armar dist/      → copia index.html, config.js, js/, images/ y las
-#                         librerías desde node_modules/ (sin commitear node_modules)
-#   3. Deploy           → publica dist/ en GitHub Pages
+# Flujo (3 jobs en cadena; si cualquiera falla los siguientes no corren):
+#
+#   1. test    → ejecuta los tests y verifica cobertura ≥ 95%
+#               si algún test falla o la cobertura baja, el build NO se lanza
+#   2. build   → arma dist/ con los archivos que necesita el navegador
+#   3. deploy  → publica dist/ en GitHub Pages
 #
 # server.js no se despliega: solo sirve para desarrollo local.
 # En producción, GitHub Pages sirve los archivos estáticos directamente.
@@ -35,10 +36,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ── Job 1: instalar dependencias y construir dist/ ─────────────────────────
+  # ── Job 1: tests + cobertura (GATE — bloquea el build si falla) ────────────
+  test:
+    name: Tests y cobertura
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: 📦 Instalar dependencias
+        run: npm install
+
+      # npm run test:coverage corre los 232 tests Y verifica que los umbrales
+      # de cobertura (≥95% en statements, branches, functions y lines) se cumplan.
+      # Si algún test falla o la cobertura baja, este step sale con código ≠ 0
+      # y GitHub Actions marca el job como fallido → build y deploy no corren.
+      - name: 🧪 Tests + cobertura (umbral 95%)
+        run: npm run test:coverage
+
+  # ── Job 2: construir dist/ ────────────────────────────────────────────────
   build:
     name: Construir
     runs-on: ubuntu-latest
+    needs: test # ← solo corre si los tests y la cobertura pasan
 
     steps:
       - name: 📥 Checkout del repositorio
@@ -81,6 +108,7 @@ jobs:
           cp js/exporter.js          dist/js/
           cp js/geometry.js          dist/js/
           cp js/geometry-patterns.js dist/js/
+          cp js/presets.js           dist/js/
 
           # ── Imágenes ──────────────────────────────────────────────────────────
           cp -r images/. dist/images/

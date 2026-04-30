@@ -66,6 +66,7 @@ jobs:
           # ── Archivos raíz ────────────────────────────────────────────────────
           cp index.html  dist/
           cp config.js   dist/
+          cp styles.css  dist/
 
           # ── Librerías: copiadas desde node_modules → dist/lib/ ───────────────
           # Así el navegador las recibe desde el mismo origen (CSP: script-src 'self')

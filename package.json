@@ -1,0 +1,16 @@
+{
+  "name": "mandala-animada",
+  "version": "1.0.0",
+  "description": "Animación de mandala con imágenes, exportable a video Full HD",
+  "private": true,
+  "dependencies": {
+    "p5": "1.9.4",
+    "ccapture.js": "1.1.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

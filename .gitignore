@@ -1,0 +1,28 @@
+node_modules/
+
+# ── Librerías generadas por el build ─────────────────────────────────────────
+# En CI: copiadas desde node_modules/ → dist/lib/ automáticamente.
+# En local: servidas desde node_modules/ vía server.js (LIB_ALLOWLIST).
+# No se commitean para mantener el repo liviano.
+lib/three.module.js
+lib/CCapture.all.min.js
+# Librería legacy de p5.js (ya no se usa — migrado a Three.js)
+lib/p5.min.js
+
+dist/
+
+# ── Sistema operativo ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editores ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+npm-debug.log*
+*.log

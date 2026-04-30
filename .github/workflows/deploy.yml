@@ -1,0 +1,107 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Deploy Mandala Animada → GitHub Pages
+#
+# Flujo:
+#   1. npm install      → descarga Three.js y CCapture.js en node_modules/
+#   2. Armar dist/      → copia index.html, config.js, js/, images/ y las
+#                         librerías desde node_modules/ (sin commitear node_modules)
+#   3. Deploy           → publica dist/ en GitHub Pages
+#
+# server.js no se despliega: solo sirve para desarrollo local.
+# En producción, GitHub Pages sirve los archivos estáticos directamente.
+#
+# Activación:
+#   • Automático en cada push a main
+#   • Manual desde la pestaña Actions → "Run workflow"
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: 🌸 Deploy Mandala a GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # permite lanzarlo manualmente desde la UI de GitHub
+
+# Permisos mínimos necesarios para Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Si se hace un nuevo push antes de que termine el deploy anterior,
+# cancela el antiguo y arranca el nuevo.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # ── Job 1: instalar dependencias y construir dist/ ─────────────────────────
+  build:
+    name: Construir
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm" # cachea node_modules entre runs para mayor velocidad
+
+      # npm install descarga Three.js 0.128.0 y CCapture.js 1.1.0
+      - name: 📦 Instalar dependencias
+        run: npm install
+
+      # Armamos dist/ con exactamente los archivos que necesita el navegador.
+      # node_modules/ NO se sube a Pages (es grande y contiene muchos archivos
+      # que el navegador nunca va a pedir directamente).
+      - name: 🏗️ Armar carpeta de deploy (dist/)
+        run: |
+          set -e   # detener si cualquier comando falla
+
+          mkdir -p dist/lib dist/js dist/images
+
+          # ── Archivos raíz ────────────────────────────────────────────────────
+          cp index.html  dist/
+          cp config.js   dist/
+
+          # ── Librerías: copiadas desde node_modules → dist/lib/ ───────────────
+          # Así el navegador las recibe desde el mismo origen (CSP: script-src 'self')
+          cp node_modules/p5/lib/p5.min.js              dist/lib/p5.min.js
+          cp node_modules/ccapture.js/build/CCapture.all.min.js   dist/lib/CCapture.all.min.js
+
+          # ── Código fuente (módulos ES) ────────────────────────────────────────
+          cp js/main.js              dist/js/
+          # cp js/renderer-three.js  dist/js/
+          cp js/renderer-p5.js       dist/js/
+          cp js/animator.js          dist/js/
+          cp js/exporter.js          dist/js/
+          cp js/geometry.js          dist/js/
+          cp js/geometry-patterns.js dist/js/
+
+          # ── Imágenes ──────────────────────────────────────────────────────────
+          cp -r images/. dist/images/
+
+          echo "✅ dist/ armado correctamente"
+          find dist/ -type f | sort
+
+      - name: 📤 Subir artefacto para GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist # solo sube dist/, sin node_modules
+
+  # ── Job 2: publicar en GitHub Pages ────────────────────────────────────────
+  deploy:
+    name: Publicar
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build # espera a que el job "build" termine correctamente
+
+    steps:
+      - name: 🚀 Desplegar a GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

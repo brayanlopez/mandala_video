@@ -55,7 +55,7 @@ jobs:
 
       # npm ci garantiza versiones exactas del lock file (reproducible)
       - name: 📦 Instalar dependencias (ci)
-        run: npm ci
+        run: npm i
 
       # Armamos dist/ con exactamente los archivos que necesita el navegador.
       # node_modules/ NO se sube a Pages (es grande y contiene muchos archivos

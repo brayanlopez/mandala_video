@@ -109,16 +109,22 @@ export class Exporter {
       return;
     }
 
-    // eslint-disable-next-line no-undef
-    this._capturer = new CCapture({
-      format: "webm",
-      framerate: this._config.canvas.fps,
-      quality: 95,
-      verbose: false,
-      display: false,
-    });
-
-    this._capturer.start();
+    try {
+      // eslint-disable-next-line no-undef
+      this._capturer = new CCapture({
+        format: "webm",
+        framerate: this._config.canvas.fps,
+        quality: 95,
+        verbose: false,
+        display: false,
+      });
+      this._capturer.start();
+    } catch (e) {
+      console.error("[Exporter] CCapture falló al iniciar:", e.message);
+      this._capturer = null;
+      this._isCapturing = false;
+      if (this._onDone) this._onDone(null);
+    }
   }
 
   _stopCCapture() {
@@ -144,7 +150,15 @@ export class Exporter {
   // ─── MediaRecorder ────────────────────────────────────────────────────────
 
   _startMediaRecorder() {
-    const stream = this._canvas.captureStream(this._config.canvas.fps);
+    let stream;
+    try {
+      stream = this._canvas.captureStream(this._config.canvas.fps);
+    } catch (e) {
+      console.error("[Exporter] captureStream falló:", e.message);
+      this._isCapturing = false;
+      if (this._onDone) this._onDone(null);
+      return;
+    }
 
     // Seleccionar codec disponible
     const mimeType = this._getSupportedMimeType();

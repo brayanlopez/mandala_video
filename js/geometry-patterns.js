@@ -33,6 +33,18 @@ import { sanitizePath } from "./geometry.js";
 
 const DEG = Math.PI / 180;
 
+// ─── Factores de escala por patrón ────────────────────────────────────────────
+//
+// Todos se multiplican por minDim (Math.min(width, height)) para mantener
+// las proporciones al cambiar la resolución del canvas.
+
+/** Distancia entre centros de hexágonos en computeFlorLayout */
+const HEX_SPACING_FACTOR = 0.152;
+/** Distancia entre celdas en computeDiamanteLayout */
+const DIAMOND_SPACING_FACTOR = 0.115;
+/** Circunradio del triángulo exterior (Koch, Triangular, Sierpinski) */
+const TRIANGLE_CIRCUM_FACTOR = 0.42;
+
 // ─── Helpers comunes ──────────────────────────────────────────────────────────
 
 /**
@@ -194,7 +206,7 @@ export function computeFlorLayout(config) {
   const cy = config.canvas.height / 2;
   const pool = buildImagePool(config);
   const minDim = Math.min(config.canvas.width, config.canvas.height);
-  const spacing = minDim * 0.152; // distancia entre centros de hexágonos
+  const spacing = minDim * HEX_SPACING_FACTOR;
 
   const MAX_LAYER = 3;
   const SIZE_BY_LAYER = [128, 100, 80, 65];
@@ -375,7 +387,7 @@ export function computeDiamanteLayout(config) {
   const cy = config.canvas.height / 2;
   const pool = buildImagePool(config);
   const minDim = Math.min(config.canvas.width, config.canvas.height);
-  const spacing = minDim * 0.115;
+  const spacing = minDim * DIAMOND_SPACING_FACTOR;
 
   const MAX_LAYER = 4;
   const SIZE_BY_LAYER = [120, 96, 78, 64, 52];
@@ -567,7 +579,7 @@ export function computeTriangularLayout(config) {
   const minDim = Math.min(config.canvas.width, config.canvas.height);
 
   const N = 7; // subdivisiones → 36 puntos de malla
-  const R = minDim * 0.42; // circunradio del triángulo exterior
+  const R = minDim * TRIANGLE_CIRCUM_FACTOR; // circunradio del triángulo exterior
 
   // Vértices del triángulo equilátero (CCW, vértice superior en -90°)
   const V = [0, 1, 2].map((k) => {
@@ -655,7 +667,7 @@ export function computeSierpinskiLayout(config) {
   const pool = buildImagePool(config);
   const minDim = Math.min(config.canvas.width, config.canvas.height);
 
-  const R = minDim * 0.42; // circunradio del triángulo inicial
+  const R = minDim * TRIANGLE_CIRCUM_FACTOR; // circunradio del triángulo inicial
   const DEPTH = 3; // 3^3 = 27 sub-triángulos
 
   // Triángulo inicial CCW, vértice superior en -90°

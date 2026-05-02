@@ -134,6 +134,15 @@ export class P5Renderer {
   }
 
   /**
+   * Vacía la caché de imágenes sin destruir el renderer.
+   * Llamar antes de cargar las imágenes de un nuevo patrón para liberar
+   * las referencias a imágenes del patrón anterior que ya no se usarán.
+   */
+  clearImageCache() {
+    this._imageCache.clear();
+  }
+
+  /**
    * Destruye la instancia de p5 y libera el canvas.
    */
   destroy() {

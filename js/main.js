@@ -188,6 +188,9 @@ async function switchPattern(patternName) {
   // Recalcular layout para el nuevo patrón
   AppState.slots = computeLayout(patternName, CONFIG);
 
+  // Limpiar caché de imágenes del patrón anterior antes de cargar las nuevas
+  AppState.renderer.clearImageCache();
+
   // Recargar imágenes (el nuevo patrón puede tener diferente distribución)
   AppState.images = await loadAllImages();
 
@@ -245,17 +248,30 @@ function startPreview() {
 
 // ─── Export frame-by-frame (CCapture) ────────────────────────────────────
 
+/**
+ * Habilita o deshabilita los controles que no deben usarse durante el export.
+ * bgColorInput tiene lógica especial: permanece deshabilitado si transparentBg está activo.
+ * @param {boolean} disabled
+ */
+function setExportControls(disabled) {
+  [
+    UI.btnExport,
+    UI.btnPlay,
+    UI.btnSettings,
+    UI.staggerSlider,
+    UI.durationSlider,
+    UI.transparentCheckbox,
+  ].forEach((el) => {
+    el.disabled = disabled;
+  });
+  UI.bgColorInput.disabled = disabled || CONFIG.export.transparentBg;
+}
+
 async function runExport() {
   if (AppState.isExporting) return;
   AppState.isExporting = true;
 
-  UI.btnExport.disabled = true;
-  UI.btnPlay.disabled = true;
-  UI.btnSettings.disabled = true;
-  UI.staggerSlider.disabled = true;
-  UI.durationSlider.disabled = true;
-  UI.bgColorInput.disabled = true;
-  UI.transparentCheckbox.disabled = true;
+  setExportControls(true);
   UI.progressWrap.classList.add("is-exporting");
   document.dispatchEvent(new CustomEvent("mandala:export-start"));
 
@@ -269,13 +285,7 @@ async function runExport() {
     },
     () => {
       AppState.isExporting = false;
-      UI.btnExport.disabled = false;
-      UI.btnPlay.disabled = false;
-      UI.btnSettings.disabled = false;
-      UI.staggerSlider.disabled = false;
-      UI.durationSlider.disabled = false;
-      UI.bgColorInput.disabled = CONFIG.export.transparentBg; // mantener deshabilitado si modo transparente sigue activo
-      UI.transparentCheckbox.disabled = false;
+      setExportControls(false);
       UI.progressWrap.classList.remove("is-exporting");
       setStatus("✅ Video descargado. Revisá tu carpeta de descargas.");
       document.dispatchEvent(new CustomEvent("mandala:export-end"));

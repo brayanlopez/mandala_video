@@ -34,7 +34,7 @@
       </header>
 
       <!-- ── Canvas ─────────────────────────────────────────────────────────── -->
-      <div class="canvas-area">
+      <div class="canvas-area" id="canvas-area">
         <div id="canvas-container"></div>
 
         <div class="export-overlay" id="export-overlay">
@@ -63,6 +63,10 @@
             <option value="fadeIn">Fade In</option>
             <option value="spinIn">Spin In</option>
             <option value="flyIn">Fly In</option>
+            <option value="drop">Drop (rebote)</option>
+            <option value="slideOut">Deslizar</option>
+            <option value="shrink">Contraer</option>
+            <option value="spiral">Espiral (×2)</option>
           </select>
         </div>
 
@@ -249,9 +253,19 @@
               </select>
             </div>
 
+            <div class="settings-row">
+              <label for="transparent-checkbox">Fondo transparente</label>
+              <input type="checkbox" id="transparent-checkbox" title="Exportar sin fondo (canal alfa)" />
+            </div>
+
             <div class="settings-row ffmpeg-row">
               <label>Convertir a MP4</label>
               <code>ffmpeg -i mandala.webm -c:v libx264 -crf 17 -pix_fmt yuv420p out.mp4</code>
+            </div>
+
+            <div class="settings-row ffmpeg-row" id="ffmpeg-alpha-row" style="display:none">
+              <label>Alpha → VP9</label>
+              <code>ffmpeg -i mandala_transparent.webm -c:v libvpx-vp9 -pix_fmt yuva420p out_alpha.webm</code>
             </div>
           </div>
 

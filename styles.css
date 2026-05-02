@@ -396,12 +396,32 @@ input[type="checkbox"]:disabled {
   color: var(--text-dim);
   min-height: 14px;
 }
-.preset-status.ok  { color: var(--success); }
-.preset-status.err { color: var(--danger);  }
+.preset-status.ok {
+  color: var(--success);
+}
+.preset-status.err {
+  color: var(--danger);
+}
 
 /* Botón de ajustes con estado activo */
 .btn.active {
   background: rgba(124, 58, 237, 0.15);
   border-color: var(--accent);
   color: var(--accent-h);
+}
+
+/* ── Fondo transparente: cuadrícula de ajedrez como previsualización ─── */
+.canvas-area.transparent-mode {
+  background-color: #555;
+  background-image:
+    linear-gradient(45deg, #888 25%, transparent 25%),
+    linear-gradient(-45deg, #888 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #888 75%),
+    linear-gradient(-45deg, transparent 75%, #888 75%);
+  background-size: 24px 24px;
+  background-position:
+    0 0,
+    0 12px,
+    12px -12px,
+    -12px 0px;
 }

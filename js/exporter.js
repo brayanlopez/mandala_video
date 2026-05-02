@@ -130,7 +130,10 @@ export class Exporter {
 
       this._capturer.stop();
       this._capturer.save((blob) => {
-        this._downloadBlob(blob, "mandala.webm");
+        const filename = this._config.export?.transparentBg
+          ? "mandala_transparent.webm"
+          : "mandala.webm";
+        this._downloadBlob(blob, filename);
         if (this._onDone) this._onDone(blob);
         if (this._onProgress) this._onProgress(1);
         resolve();
@@ -159,7 +162,10 @@ export class Exporter {
 
     this._recorder.onstop = () => {
       const blob = new Blob(this._chunks, { type: mimeType });
-      this._downloadBlob(blob, "mandala.webm");
+      const filename = this._config.export?.transparentBg
+        ? "mandala_transparent.webm"
+        : "mandala.webm";
+      this._downloadBlob(blob, filename);
       if (this._onDone) this._onDone(blob);
       if (this._onProgress) this._onProgress(1);
     };

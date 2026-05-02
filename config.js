@@ -13,6 +13,7 @@ export const CONFIG = {
     height: 1080, // alto en px (Full HD)
     bgColor: "#1a0a2e", // color de fondo (#hex o 'transparent')
     fps: 60, // frames por segundo para export (30 o 60)
+    imgScale: 1.0, // multiplicador global de tamaño de imágenes (0.3 – 2.0)
   },
 
   // ─── Animación ────────────────────────────────────────────────────────────
@@ -90,5 +91,10 @@ export const CONFIG = {
 
     // Bitrate para MediaRecorder (en bits/s). Solo aplica si captureMode='mediarecorder'.
     videoBitsPerSecond: 8_000_000, // 8 Mbps
+
+    // Exportar con fondo transparente (sin color de fondo).
+    // Útil para componer el video sobre otros fondos en un editor externo.
+    // El archivo resultante se llama mandala_transparent.webm.
+    transparentBg: false,
   },
 };

@@ -214,7 +214,9 @@ export class Animator {
   // ─── Lógica de estado ─────────────────────────────────────────────────────
 
   _renderFrame() {
-    const { bgColor } = this._config.canvas;
+    const bgColor = this._config.export?.transparentBg
+      ? "transparent"
+      : this._config.canvas.bgColor;
     const { staggerDelay, entryDuration, entryEffect } = this._config.animation;
 
     this._renderer.clear(bgColor);

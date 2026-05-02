@@ -59,6 +59,9 @@ const UI = {
   loopCheckbox: $("loop-checkbox"),
   fpsSelect: $("fps-select"),
   captureSelect: $("capture-select"),
+  transparentCheckbox: $("transparent-checkbox"),
+  canvasArea: $("canvas-area"),
+  ffmpegAlphaRow: $("ffmpeg-alpha-row"),
   // ── Presets (F-06) ──────────────────────────────────────────────────────
   presetNameInput: $("preset-name-input"),
   presetSelect: $("preset-select"),
@@ -221,6 +224,7 @@ async function runExport() {
   UI.staggerSlider.disabled = true;
   UI.durationSlider.disabled = true;
   UI.bgColorInput.disabled = true;
+  UI.transparentCheckbox.disabled = true;
   UI.progressWrap.classList.add("is-exporting");
   document.dispatchEvent(new CustomEvent("mandala:export-start"));
 
@@ -239,7 +243,8 @@ async function runExport() {
       UI.btnSettings.disabled = false;
       UI.staggerSlider.disabled = false;
       UI.durationSlider.disabled = false;
-      UI.bgColorInput.disabled = false;
+      UI.bgColorInput.disabled = CONFIG.export.transparentBg; // mantener deshabilitado si modo transparente sigue activo
+      UI.transparentCheckbox.disabled = false;
       UI.progressWrap.classList.remove("is-exporting");
       setStatus("✅ Video descargado. Revisá tu carpeta de descargas.");
       document.dispatchEvent(new CustomEvent("mandala:export-end"));
@@ -399,6 +404,19 @@ function bindControls() {
     CONFIG.export.captureMode = selected;
   });
 
+  // ── Fondo transparente ────────────────────────────────────────────────────
+  UI.transparentCheckbox.addEventListener("change", () => {
+    CONFIG.export.transparentBg = UI.transparentCheckbox.checked;
+    UI.bgColorInput.disabled = UI.transparentCheckbox.checked;
+    UI.canvasArea.classList.toggle(
+      "transparent-mode",
+      UI.transparentCheckbox.checked,
+    );
+    UI.ffmpegAlphaRow.style.display = UI.transparentCheckbox.checked
+      ? ""
+      : "none";
+  });
+
   // ── Presets (F-06) ───────────────────────────────────────────────────────
 
   // Guardar en localStorage
@@ -511,6 +529,14 @@ function syncUIFromConfig() {
   UI.effectSelect.value = CONFIG.animation.entryEffect;
   UI.captureSelect.value = CONFIG.export.captureMode;
   UI.patternSelect.value = currentPattern;
+  UI.transparentCheckbox.checked = CONFIG.export.transparentBg ?? false;
+  UI.bgColorInput.disabled = CONFIG.export.transparentBg ?? false;
+  UI.canvasArea.classList.toggle(
+    "transparent-mode",
+    CONFIG.export.transparentBg ?? false,
+  );
+  UI.ffmpegAlphaRow.style.display =
+    (CONFIG.export.transparentBg ?? false) ? "" : "none";
 }
 
 /** Reconstruye el <select> de presets desde localStorage. */

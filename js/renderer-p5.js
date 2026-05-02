@@ -155,7 +155,11 @@ export class P5Renderer {
 
     for (const cmd of this._drawQueue) {
       if (cmd.type === "clear") {
-        p.background(cmd.bgColor);
+        if (cmd.bgColor === "transparent") {
+          p.clear(); // borra el canvas a transparente total (RGBA 0,0,0,0)
+        } else {
+          p.background(cmd.bgColor);
+        }
       } else if (cmd.type === "image") {
         p.push();
         p.translate(cmd.x, cmd.y);

@@ -44,6 +44,10 @@ const HEX_SPACING_FACTOR = 0.152;
 const DIAMOND_SPACING_FACTOR = 0.115;
 /** Circunradio del triángulo exterior (Koch, Triangular, Sierpinski) */
 const TRIANGLE_CIRCUM_FACTOR = 0.42;
+/** Radio externo para patrones espiral/cuadrícula/arquímedes (44 % de minDim) */
+const OUTER_RADIUS_FACTOR = 0.44;
+/** Radio o amplitud para curvas paramétricas — Lissajous y Rosa polar (38 % de minDim) */
+const CURVE_RADIUS_FACTOR = 0.38;
 
 // ─── Helpers comunes ──────────────────────────────────────────────────────────
 
@@ -129,7 +133,7 @@ export function computeEspiralLayout(config) {
 
   const N = 55; // Número de Fibonacci
   const GOLDEN_ANGLE = 137.508 * DEG; // ángulo dorado
-  const MAX_RADIUS = minDim * 0.44; // radio máximo
+  const MAX_RADIUS = minDim * OUTER_RADIUS_FACTOR; // radio máximo
   const SIZE_MAX = 120; // tamaño en el centro
   const SIZE_MIN = 48; // tamaño en el borde
 
@@ -342,7 +346,7 @@ export function computeTriskelionLayout(config) {
   const ARMS = 3;
   const PER_ARM = 18;
   const MIN_R = minDim * 0.06; // radio mínimo (evita apilar en el centro)
-  const MAX_R = minDim * 0.44;
+  const MAX_R = minDim * OUTER_RADIUS_FACTOR;
   const TURNS = 0.75; // fracción de vuelta por brazo (270°)
 
   const slots = [];
@@ -431,8 +435,8 @@ export function computeLissajousLayout(config) {
   const pool = buildImagePool(config);
   const minDim = Math.min(config.canvas.width, config.canvas.height);
 
-  const A = minDim * 0.38; // amplitud en X
-  const B = minDim * 0.38; // amplitud en Y
+  const A = minDim * CURVE_RADIUS_FACTOR; // amplitud en X
+  const B = minDim * CURVE_RADIUS_FACTOR; // amplitud en Y
   const a = 3; // frecuencia X
   const b = 2; // frecuencia Y  →  relación 3:2 = figura mariposa
   const DELTA = Math.PI / 4; // desfase de fase (evita auto-intersección en t=0)
@@ -516,7 +520,7 @@ export function computeKochLayout(config) {
   const pool = buildImagePool(config);
   const minDim = Math.min(config.canvas.width, config.canvas.height);
 
-  const R = minDim * 0.38; // circunradio del triángulo inicial
+  const R = minDim * CURVE_RADIUS_FACTOR; // radio exterior de la curva
   const ITERATIONS = 2; // 3 × 4² = 48 vértices
   const COS60 = 0.5;
   const SIN60 = Math.sqrt(3) / 2;
@@ -631,7 +635,7 @@ export function computeArquimedesLayout(config) {
 
   const N = 55; // slots totales
   const TURNS = 4; // vueltas completas
-  const MAX_R = minDim * 0.44;
+  const MAX_R = minDim * OUTER_RADIUS_FACTOR;
   const MIN_R = minDim * 0.03; // desplazamiento mínimo para evitar apilar en (0,0)
 
   const slots = [];

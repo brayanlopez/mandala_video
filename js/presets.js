@@ -135,6 +135,19 @@ export function presetToJSON(data) {
  * @param {string} json
  * @returns {object}
  */
+/**
+ * Valida que `data[field]` sea un objeto no-null.
+ * Lanza Error descriptivo si falta o tiene tipo incorrecto.
+ *
+ * @param {object} data
+ * @param {string} field
+ */
+function requireObject(data, field) {
+  if (typeof data[field] !== "object" || data[field] === null) {
+    throw new Error(`Campo requerido "${field}" ausente o inválido`);
+  }
+}
+
 export function presetFromJSON(json) {
   let data;
   try {
@@ -150,11 +163,7 @@ export function presetFromJSON(json) {
       `Versión de preset incompatible (esperada: ${PRESET_VERSION})`,
     );
   }
-  if (typeof data.animation !== "object" || data.animation === null) {
-    throw new Error('Campo requerido "animation" ausente o inválido');
-  }
-  if (typeof data.canvas !== "object" || data.canvas === null) {
-    throw new Error('Campo requerido "canvas" ausente o inválido');
-  }
+  requireObject(data, "animation");
+  requireObject(data, "canvas");
   return data;
 }

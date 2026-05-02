@@ -651,6 +651,21 @@ function bindTransparentCheckbox() {
 
 // ── Presets (F-06) ────────────────────────────────────────────────────────
 
+/**
+ * Ejecuta fn() y captura cualquier Error lanzado mostrándolo como estado de preset.
+ * Centraliza el patrón try/catch repetido en los handlers de preset.
+ * Las guard clauses de validación de entrada deben ejecutarse antes de llamar aquí.
+ *
+ * @param {() => void | Promise<void>} fn
+ */
+async function withPresetAction(fn) {
+  try {
+    await fn();
+  } catch (e) {
+    showPresetStatus(`❌ ${e.message}`, "err");
+  }
+}
+
 function bindPresetControls() {
   // Guardar en localStorage
   UI.btnSavePreset.addEventListener("click", () => {
@@ -659,14 +674,12 @@ function bindPresetControls() {
       showPresetStatus("⚠ Escribí un nombre", "err");
       return;
     }
-    try {
+    withPresetAction(() => {
       savePreset(name, capturePreset(CONFIG, AppState.currentPattern));
       populatePresetSelect();
       UI.presetSelect.value = name;
       showPresetStatus(`✅ "${name}" guardado`, "ok");
-    } catch (e) {
-      showPresetStatus(`❌ ${e.message}`, "err");
-    }
+    });
   });
 
   // Exportar como archivo JSON
@@ -699,8 +712,10 @@ function bindPresetControls() {
       showPresetStatus("⚠ Preset no encontrado", "err");
       return;
     }
-    await applyPresetData(data);
-    showPresetStatus(`✅ "${name}" aplicado`, "ok");
+    await withPresetAction(async () => {
+      await applyPresetData(data);
+      showPresetStatus(`✅ "${name}" aplicado`, "ok");
+    });
   });
 
   // Borrar de localStorage
@@ -710,25 +725,24 @@ function bindPresetControls() {
       showPresetStatus("⚠ Seleccioná un preset", "err");
       return;
     }
-    deletePreset(name);
-    populatePresetSelect();
-    showPresetStatus(`🗑 "${name}" borrado`, "ok");
+    withPresetAction(() => {
+      deletePreset(name);
+      populatePresetSelect();
+      showPresetStatus(`🗑 "${name}" borrado`, "ok");
+    });
   });
 
   // Importar desde archivo JSON
   UI.importPresetFile.addEventListener("change", async () => {
     const file = UI.importPresetFile.files?.[0];
     if (!file) return;
-    try {
+    await withPresetAction(async () => {
       const text = await file.text();
       const data = presetFromJSON(text);
       await applyPresetData(data);
       showPresetStatus("✅ Preset importado", "ok");
-    } catch (e) {
-      showPresetStatus(`❌ ${e.message}`, "err");
-    } finally {
-      UI.importPresetFile.value = ""; // permite reimportar el mismo archivo
-    }
+    });
+    UI.importPresetFile.value = ""; // ejecutar siempre — después de éxito o error
   });
 }
 

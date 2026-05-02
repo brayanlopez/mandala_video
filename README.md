@@ -1,113 +1,67 @@
 # Mandala Animada
 
-Animated mandala generator built with p5.js and CCapture.js, exportable to Full HD video.
+Animated mandala generator built with p5.js and CCapture.js, exportable to Full HD WebM video.
 
 ## Features
 
-- **Configurable mandala rings** — Customize ring count, radius, image size, and images via `config.js`
-- **5 geometric patterns** — Circular rings, interlaced star, golden spiral, flower of life, sacred grid
-- **4 entry effects** — Scale In, Fade In, Spin In, Fly In
-- **Video export** — Export to WebM using CCapture.js (high quality) or MediaRecorder API
-- **Full HD output** — 1920×1080 canvas at 60fps
-- **Security-first** — Strict CSP, no external CDN dependencies, path traversal protection
+- **14 geometric patterns** — rings, golden spiral, flower of life, star, pentagon, triskelion, Lissajous, Koch snowflake, Sierpinski, and more
+- **8 entry effects** — Scale In, Fade In, Spin In, Fly In, Drop, Slide, Shrink, Spiral
+- **Continuous effects** — idle float, camera breathing, ambient particles, glow halo (all renderer-agnostic)
+- **Settings panel** — real-time controls for animation, effects, presets, and export
+- **Preset system** — save/load/import/export configuration via localStorage and JSON
+- **Two rendering engines** — p5.js (Canvas 2D, default) and Three.js (WebGL 3D with Z-depth per ring), switchable at runtime from the settings panel
+- **Full HD export** — 1920×1080 WebM via CCapture.js (frame-by-frame, deterministic) or MediaRecorder
+- **Security-first** — strict CSP, no external CDN, path traversal protection, no `innerHTML`
 
-For a detailed per-file feature breakdown and future roadmap, see [FEATURE.md](FEATURE.md).
-
-## Requirements
-
-- Node.js ≥ 16
-- npm
-
-## Quick Start
+## Quick start
 
 ```bash
 npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000). Dependencies install automatically on first run.
 
-The server auto-installs dependencies on first run.
+Node.js ≥ 16 required.
 
 ## Configuration
 
-Edit `config.js` to customize:
+Edit `config.js`. All changes are picked up immediately without restarting.
+Full parameter reference: [`ARCHITECTURE.md — Configuration reference`](ARCHITECTURE.md#configuration-reference).
 
-### Canvas
+Effects can also be toggled live from **⚙ Ajustes → Efectos** without editing any file.
 
-| Parameter        | Default   | Description                             |
-| ---------------- | --------- | --------------------------------------- |
-| `canvas.width`   | `1920`    | Canvas width in pixels                  |
-| `canvas.height`  | `1080`    | Canvas height in pixels                 |
-| `canvas.bgColor` | `#1a0a2e` | Background color (hex or `transparent`) |
-| `canvas.fps`     | `60`      | Export framerate (30 or 60)             |
+## Customizing images
 
-### Animation
+1. Place images in `images/` (or subfolders)
+2. Update the `images` arrays in `config.js`
 
-| Parameter                 | Default   | Description                                          |
-| ------------------------- | --------- | ---------------------------------------------------- |
-| `animation.speed`         | `1.0`     | Global speed multiplier                              |
-| `animation.staggerDelay`  | `160`     | ms delay between each image entry                    |
-| `animation.entryDuration` | `700`     | ms duration of entry effect per image                |
-| `animation.entryEffect`   | `scaleIn` | Entry effect: `fadeIn`, `scaleIn`, `spinIn`, `flyIn` |
-| `animation.rotationSpeed` | `0.04`    | Degrees/frame continuous rotation (0 = none)         |
-| `animation.loopAnimation` | `false`   | Loop animation after completion                      |
-
-### Mandala Rings
-
-Each ring object in `mandala.rings` defines:
-
-- `count` — number of positions in the ring
-- `radius` — distance from center in pixels (0 = exact center)
-- `imgSize` — image size in pixels
-- `images` — array of image paths (cycles if fewer than `count`)
-
-### Export
-
-| Parameter                   | Default    | Description                                              |
-| --------------------------- | ---------- | -------------------------------------------------------- |
-| `export.captureMode`        | `ccapture` | `ccapture` (recommended) or `mediarecorder`              |
-| `export.durationSeconds`    | `null`     | Export duration in seconds (null = until animation ends) |
-| `export.videoBitsPerSecond` | `8000000`  | Bitrate for MediaRecorder (8 Mbps)                       |
-
-## Customizing Images
-
-1. Place your images in the `images/` folder (or subfolders)
-2. Update the `images` arrays in `config.js` with the new paths
-
-## Converting WebM to MP4
-
-The app exports WebM files. Convert to MP4 using ffmpeg:
+## Convert WebM to MP4
 
 ```bash
 ffmpeg -i mandala.webm -c:v libx264 -crf 17 -pix_fmt yuv420p mandala_1080p.mp4
 ```
 
-## Project Structure
+## Project structure
 
 ```
-mandala_video/
-├── config.js           # Editable mandala parameters
-├── server.js           # Local dev server (auto-installs deps)
-├── index.html          # Main UI
+├── config.js              # All parameters
 ├── js/
-│   ├── main.js         # Entry point, event handling
-│   ├── animator.js     # Animation timing and state
-│   ├── exporter.js     # Video export (CCapture/MediaRecorder)
-│   ├── geometry.js     # Core geometry calculations
-│   ├── geometry-patterns.js  # Pattern generators
-│   └── renderer-p5.js  # p5.js rendering layer
-├── images/
-│   ├── center/         # Center image
-│   ├── ring1/          # Inner ring images
-│   ├── ring2/          # Middle ring images
-│   └── ring3/          # Outer ring images
-└── package.json
+│   ├── main.js            # Orchestrator + UI
+│   ├── animator.js        # State machine + effects
+│   ├── renderer-interface.js  # Renderer registry + createRenderer() factory (41 lines)
+│   ├── renderer-p5.js         # p5.js Canvas 2D adapter (262 lines)
+│   ├── renderer-three.js      # Three.js WebGL 3D adapter — Z-depth, GPU glow/particles (473 lines)
+│   ├── exporter.js        # Video capture
+│   ├── geometry*.js       # Layout algorithms
+│   └── presets.js         # Preset persistence
+├── tests/                 # 277 cases, 98.7% coverage
+└── images/                # center/, ring1/, ring2/, ring3/
 ```
 
-## Security
+## Documentation
 
-- Strict Content Security Policy (no external scripts, no eval)
-- All libraries served locally from `node_modules` (no CDN)
-- Path traversal protection on static file serving
-- MIME type allowlist for served files
-- Security headers: COOP, COEP, X-Content-Type-Options
+| File                                 | Contents                                                                        |
+| ------------------------------------ | ------------------------------------------------------------------------------- |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | System design, layers, patterns, full config reference, extensibility, security |
+| [`DEVELOPMENT.md`](DEVELOPMENT.md)   | Dev setup, testing, CI, module notes, open issues, scorecard                    |
+| [`ROADMAP.md`](ROADMAP.md)           | Pending features and PixiJS renderer implementation guide                       |

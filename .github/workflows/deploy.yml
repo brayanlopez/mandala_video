@@ -1,12 +1,19 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # Deploy Mandala Animada → GitHub Pages
 #
-# Flujo (3 jobs en cadena; si cualquiera falla los siguientes no corren):
+# Flujo (4 jobs en cadena; si cualquiera falla los siguientes no corren):
 #
-#   1. test    → ejecuta los tests y verifica cobertura ≥ 95%
-#               si algún test falla o la cobertura baja, el build NO se lanza
-#   2. build   → arma dist/ con los archivos que necesita el navegador
-#   3. deploy  → publica dist/ en GitHub Pages
+#   1. lint    → ESLint + Prettier (formato)
+#   2. test    → 277 tests, cobertura ≥ 95%
+#   3. build   → arma dist/ con todos los archivos que necesita el navegador
+#   4. deploy  → publica dist/ en GitHub Pages
+#
+# Archivos incluidos en dist/:
+#   index.html, config.js, styles.css
+#   js/  → main, animator, exporter, renderer-p5, renderer-three,
+#           renderer-interface, geometry, geometry-patterns, presets
+#   lib/ → p5.min.js, CCapture.all.min.js, three.module.js
+#   images/
 #
 # server.js no se despliega: solo sirve para desarrollo local.
 # En producción, GitHub Pages sirve los archivos estáticos directamente.
@@ -36,11 +43,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ── Job 1: tests + cobertura (GATE — bloquea el build si falla) ────────────
-
-  # ── Job 2: construir dist/ ────────────────────────────────────────────────
-  build:
-    name: Construir
+  # ── Job 1: lint + formato (GATE — bloquea test si falla) ───────────────────
+  lint:
+    name: Lint y formato
     runs-on: ubuntu-latest
 
     steps:
@@ -51,42 +56,93 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm" # cachea node_modules entre runs para mayor velocidad
+          cache: "npm"
 
-      # npm ci garantiza versiones exactas del lock file (reproducible)
       - name: 📦 Instalar dependencias (ci)
-        run: npm i
+        run: npm ci
+
+      - name: 🔍 ESLint
+        run: npm run lint
+
+      - name: 💅 Prettier (verificar formato)
+        run: npm run format:check
+
+  # ── Job 2: tests + cobertura (GATE — bloquea el build si falla) ────────────
+  test:
+    name: Tests y cobertura
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: 📥 Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: 📦 Instalar dependencias (ci)
+        run: npm ci
+
+      # Corre los 277 tests y verifica cobertura ≥ 95% en las 4 métricas.
+      # Si algún test falla o la cobertura baja, este step sale con código ≠ 0
+      # y GitHub Actions marca el job como fallido → build y deploy no corren.
+      - name: 🧪 Tests + cobertura (umbral 95%)
+        run: npm run test:coverage
+
+  # ── Job 3: construir dist/ ─────────────────────────────────────────────────
+  build:
+    name: Construir
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: 📥 Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: 📦 Instalar dependencias (ci)
+        run: npm ci
 
       # Armamos dist/ con exactamente los archivos que necesita el navegador.
-      # node_modules/ NO se sube a Pages (es grande y contiene muchos archivos
-      # que el navegador nunca va a pedir directamente).
+      # node_modules/ NO se sube a Pages (grande y con archivos que el navegador
+      # nunca pide directamente). Las librerías se copian a dist/lib/ para que
+      # el navegador las reciba desde el mismo origen (CSP: script-src 'self').
       - name: 🏗️ Armar carpeta de deploy (dist/)
         run: |
           set -e   # detener si cualquier comando falla
 
           mkdir -p dist/lib dist/js dist/images
 
-          # ── Archivos raíz ────────────────────────────────────────────────────
-          cp index.html  dist/
-          cp config.js   dist/
-          cp styles.css  dist/
+          # ── Archivos raíz ──────────────────────────────────────────────────
+          cp index.html dist/
+          cp config.js  dist/
+          cp styles.css dist/
 
-          # ── Librerías: copiadas desde node_modules → dist/lib/ ───────────────
-          # Así el navegador las recibe desde el mismo origen (CSP: script-src 'self')
-          cp node_modules/p5/lib/p5.min.js              dist/lib/p5.min.js
-          cp node_modules/ccapture.js/build/CCapture.all.min.js   dist/lib/CCapture.all.min.js
+          # ── Librerías: copiadas desde node_modules → dist/lib/ ─────────────
+          cp node_modules/p5/lib/p5.min.js                           dist/lib/p5.min.js
+          cp node_modules/ccapture.js/build/CCapture.all.min.js      dist/lib/CCapture.all.min.js
+          cp node_modules/three/build/three.module.js                dist/lib/three.module.js
 
-          # ── Código fuente (módulos ES) ────────────────────────────────────────
-          cp js/main.js              dist/js/
-          # cp js/renderer-three.js  dist/js/
-          cp js/renderer-p5.js       dist/js/
-          cp js/animator.js          dist/js/
-          cp js/exporter.js          dist/js/
-          cp js/geometry.js          dist/js/
-          cp js/geometry-patterns.js dist/js/
-          cp js/presets.js           dist/js/
+          # ── Módulos JS (ES Modules) ────────────────────────────────────────
+          cp js/main.js                dist/js/
+          cp js/animator.js            dist/js/
+          cp js/exporter.js            dist/js/
+          cp js/renderer-interface.js  dist/js/
+          cp js/renderer-p5.js         dist/js/
+          cp js/renderer-three.js      dist/js/
+          cp js/geometry.js            dist/js/
+          cp js/geometry-patterns.js   dist/js/
+          cp js/presets.js             dist/js/
 
-          # ── Imágenes ──────────────────────────────────────────────────────────
+          # ── Imágenes ───────────────────────────────────────────────────────
           cp -r images/. dist/images/
 
           echo "✅ dist/ armado correctamente"
@@ -95,16 +151,16 @@ jobs:
       - name: 📤 Subir artefacto para GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist # solo sube dist/, sin node_modules
+          path: dist
 
-  # ── Job 2: publicar en GitHub Pages ────────────────────────────────────────
+  # ── Job 4: publicar en GitHub Pages ───────────────────────────────────────
   deploy:
     name: Publicar
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build # espera a que el job "build" termine correctamente
+    needs: build
 
     steps:
       - name: 🚀 Desplegar a GitHub Pages

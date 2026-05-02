@@ -125,10 +125,17 @@ export class P5Renderer {
    * @param {number}   alpha    - Opacidad 0–1
    * @param {number}   rotDeg   - Rotación en grados
    */
-  drawImage(img, x, y, size, alpha, rotDeg) {
+  // _slotIndex is passed by animator.js for Three.js Z-depth; ignored here.
+  drawImage(img, x, y, size, alpha, rotDeg, _slotIndex) {
     if (!img) return;
     this._drawQueue.push({ type: "image", img, x, y, size, alpha, rotDeg });
   }
+
+  /**
+   * No-op: p5 renderer is always 2D, no Z-depth metadata needed.
+   * Three.js renderer uses this to map slot index → ring for depth.
+   */
+  setSlotMetadata(_slots) {}
 
   /**
    * Ejecuta toda la cola de dibujo llamando a p5.redraw().

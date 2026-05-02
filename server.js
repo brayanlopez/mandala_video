@@ -55,6 +55,13 @@ const LIB_ALLOWLIST = {
     "build",
     "CCapture.all.min.js",
   ),
+  "/lib/three.module.js": path.join(
+    ROOT,
+    "node_modules",
+    "three",
+    "build",
+    "three.module.js",
+  ),
 };
 
 // ─── MIME types permitidos (allowlist) ───────────────────────────────────

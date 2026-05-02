@@ -117,6 +117,11 @@ export const CONFIG = {
     },
   },
 
+  // ─── Motor de renderizado ─────────────────────────────────────────────────
+  renderer: {
+    engine: "p5", // 'p5' | 'three' — motor activo al iniciar
+  },
+
   // ─── Export de video ──────────────────────────────────────────────────────
   export: {
     // 'ccapture'    → CCapture.js, frame-by-frame, calidad alta (recomendado)

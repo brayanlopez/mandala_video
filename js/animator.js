@@ -404,6 +404,7 @@ export class Animator {
         finalSize,
         s.alpha,
         finalRotDeg,
+        i, // slotIndex — used by Three.js renderer for Z-depth; ignored by p5
       );
     });
 

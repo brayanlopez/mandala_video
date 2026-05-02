@@ -24,6 +24,7 @@ function makeRenderer() {
     tickEffects: vi.fn(),
     pauseEffects: vi.fn(),
     resumeEffects: vi.fn(),
+    setSlotMetadata: vi.fn(),
   };
 }
 

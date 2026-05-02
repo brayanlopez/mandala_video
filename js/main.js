@@ -14,7 +14,7 @@
 import { CONFIG } from "../config.js";
 import { computeLayout } from "./geometry.js";
 import { PATTERN_REGISTRY } from "./geometry-patterns.js";
-import { P5Renderer } from "./renderer-p5.js";
+import { createRenderer, RENDERER_REGISTRY } from "./renderer-interface.js";
 import { Animator } from "./animator.js";
 import { Exporter } from "./exporter.js";
 import {
@@ -62,6 +62,8 @@ const UI = {
   transparentCheckbox: $("transparent-checkbox"),
   canvasArea: $("canvas-area"),
   ffmpegAlphaRow: $("ffmpeg-alpha-row"),
+  // ── Motor de renderizado ─────────────────────────────────────────────────
+  rendererSelect: $("renderer-select"),
   // ── Efectos visuales ────────────────────────────────────────────────────
   btnToggleEffects: $("btn-toggle-effects"),
   idleFloatCheckbox: $("idle-float-checkbox"),
@@ -91,6 +93,7 @@ const UI = {
 
 const AppState = {
   renderer: null,
+  rendererEngine: "p5", // "p5" | "three"
   animator: null,
   exporter: null,
   slots: [],
@@ -124,8 +127,10 @@ async function init() {
   // 1. Calcular posiciones con el patrón inicial
   AppState.slots = computeLayout(AppState.currentPattern, CONFIG);
 
-  // 2. Instanciar renderer (solo una vez — reutilizado al cambiar patrón)
-  AppState.renderer = new P5Renderer();
+  // 2. Instanciar renderer según config.renderer.engine
+  const engineName = CONFIG.renderer?.engine ?? "p5";
+  AppState.rendererEngine = engineName;
+  AppState.renderer = await createRenderer(engineName);
   AppState.renderer.init(
     "canvas-container",
     CONFIG.canvas.width,
@@ -149,6 +154,8 @@ async function onRendererReady() {
   );
 
   // 4. Instanciar animator y exporter
+  if (AppState.renderer.setSlotMetadata)
+    AppState.renderer.setSlotMetadata(AppState.slots);
   AppState.animator = new Animator(
     AppState.renderer,
     AppState.slots,
@@ -219,6 +226,72 @@ async function switchPattern(patternName) {
   );
 
   // Reinstanciar animator y exporter con los nuevos slots
+  if (AppState.renderer.setSlotMetadata)
+    AppState.renderer.setSlotMetadata(AppState.slots);
+  AppState.animator = new Animator(
+    AppState.renderer,
+    AppState.slots,
+    AppState.images,
+    CONFIG,
+  );
+  AppState.exporter = new Exporter(
+    AppState.renderer.getCanvas(),
+    CONFIG,
+    AppState.animator,
+    AppState.renderer,
+  );
+
+  startPreview();
+}
+
+// ─── Cambio de renderer ───────────────────────────────────────────────────
+
+/**
+ * Destruye el renderer actual, crea el nuevo y reinicia la animación.
+ * Mismo patrón que switchPattern() pero reemplaza el motor de renderizado.
+ *
+ * @param {string} engineName - "p5" | "three"
+ */
+async function switchRenderer(engineName) {
+  if (AppState.isExporting) return;
+  if (engineName === AppState.rendererEngine) return;
+
+  if (AppState.animator) {
+    AppState.animator.pause();
+    AppState.animator.reset();
+  }
+  AppState.isPlaying = false;
+  UI.btnPlay.textContent = "▶ Reproducir";
+  UI.progressBar.style.width = "0%";
+
+  const label = RENDERER_REGISTRY[engineName]?.label ?? engineName;
+  setStatus(`Cambiando motor a ${label}…`);
+
+  // Destruir renderer actual (libera GPU/canvas del DOM)
+  if (AppState.renderer) AppState.renderer.destroy();
+
+  // Crear e inicializar el nuevo renderer
+  AppState.renderer = await createRenderer(engineName);
+  AppState.rendererEngine = engineName;
+  CONFIG.renderer.engine = engineName;
+
+  await new Promise((resolve) => {
+    AppState.renderer.init(
+      "canvas-container",
+      CONFIG.canvas.width,
+      CONFIG.canvas.height,
+      resolve,
+    );
+  });
+
+  // Slot metadata y recarga de imágenes (tipos incompatibles entre motores)
+  if (AppState.renderer.setSlotMetadata)
+    AppState.renderer.setSlotMetadata(AppState.slots);
+  AppState.images = await loadAllImages();
+
+  const loaded = AppState.images.filter(Boolean).length;
+  setStatus(`${label} — ${loaded}/${AppState.slots.length} imágenes.`);
+
   AppState.animator = new Animator(
     AppState.renderer,
     AppState.slots,
@@ -345,7 +418,17 @@ async function runCCaptureLoop() {
 // Valores aceptados para campos de selección. Se valida antes de mutar CONFIG
 // para evitar valores inesperados provenientes de manipulación del DOM.
 
-const VALID_EFFECTS = new Set(["fadeIn", "scaleIn", "spinIn", "flyIn"]);
+const VALID_EFFECTS = new Set([
+  "fadeIn",
+  "scaleIn",
+  "spinIn",
+  "flyIn",
+  "drop",
+  "slideOut",
+  "shrink",
+  "spiral",
+]);
+const VALID_ENGINES = new Set(Object.keys(RENDERER_REGISTRY));
 const VALID_FPS = new Set([30, 60]);
 const VALID_CAPTURE_MODES = new Set(["ccapture", "mediarecorder"]);
 const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
@@ -649,6 +732,17 @@ function bindPresetControls() {
   });
 }
 
+// ── Motor de renderizado ──────────────────────────────────────────────────
+
+function bindRendererSelect() {
+  UI.rendererSelect.addEventListener("change", () => {
+    if (AppState.isExporting) return;
+    const val = UI.rendererSelect.value;
+    if (!VALID_ENGINES.has(val)) return;
+    switchRenderer(val);
+  });
+}
+
 // ── Efectos visuales ──────────────────────────────────────────────────────
 
 /** Sincroniza el label del botón maestro con el estado actual de los efectos. */
@@ -781,6 +875,7 @@ function bindControls() {
   bindFpsSelect();
   bindCaptureSelect();
   bindTransparentCheckbox();
+  bindRendererSelect();
   bindEffectsControls();
   bindPresetControls();
 }
@@ -839,6 +934,7 @@ function syncUIFromConfig() {
   UI.glowIntensitySlider.value = String(CONFIG.effects.glow.intensity);
   UI.glowIntensityLabel.textContent = CONFIG.effects.glow.intensity.toFixed(2);
   _syncToggleEffectsBtn();
+  UI.rendererSelect.value = AppState.rendererEngine ?? "p5";
 }
 
 /** Reconstruye el <select> de presets desde localStorage. */

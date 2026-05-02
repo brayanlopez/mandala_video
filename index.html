@@ -47,10 +47,22 @@
       <div class="controls">
         <!-- Reproducción -->
         <div class="control-group">
-          <button class="btn primary" id="btn-play" disabled aria-label="Reproducir animación">
+          <button
+            class="btn primary"
+            id="btn-play"
+            disabled
+            aria-label="Reproducir animación"
+          >
             ▶ Reproducir
           </button>
-          <button class="btn" id="btn-reset" disabled aria-label="Reiniciar animación">↺ Reiniciar</button>
+          <button
+            class="btn"
+            id="btn-reset"
+            disabled
+            aria-label="Reiniciar animación"
+          >
+            ↺ Reiniciar
+          </button>
         </div>
 
         <div class="sep"></div>
@@ -75,29 +87,52 @@
         <!-- Selector de patrón (opciones generadas desde PATTERN_REGISTRY) -->
         <div class="control-group">
           <label for="pattern-select">Patrón</label>
-          <select id="pattern-select" title="Seleccionar tipo de mandala"></select>
+          <select
+            id="pattern-select"
+            title="Seleccionar tipo de mandala"
+          ></select>
         </div>
 
         <div class="sep"></div>
 
         <!-- Exportar -->
         <div class="control-group">
-          <button class="btn" id="btn-export" disabled aria-label="Exportar video WebM">⬇ Exportar WebM</button>
+          <button
+            class="btn"
+            id="btn-export"
+            disabled
+            aria-label="Exportar video WebM"
+          >
+            ⬇ Exportar WebM
+          </button>
         </div>
 
         <div class="sep"></div>
 
         <!-- Toggle panel de ajustes -->
         <div class="control-group">
-          <button class="btn" id="btn-settings" title="Abrir / cerrar panel de ajustes">
+          <button
+            class="btn"
+            id="btn-settings"
+            title="Abrir / cerrar panel de ajustes"
+          >
             ⚙ Ajustes
           </button>
         </div>
 
         <!-- Status + barra de progreso -->
         <div class="status-area">
-          <span id="status-text" aria-live="polite" aria-atomic="true">Iniciando…</span>
-          <div id="progress-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progreso de animación">
+          <span id="status-text" aria-live="polite" aria-atomic="true"
+            >Iniciando…</span
+          >
+          <div
+            id="progress-wrap"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+            aria-label="Progreso de animación"
+          >
             <div id="progress-bar"></div>
           </div>
         </div>
@@ -107,7 +142,6 @@
       <!-- Colapsable. Se despliega al pulsar el botón ⚙ Ajustes.             -->
       <div class="settings-panel" id="settings-panel" aria-hidden="true">
         <div class="settings-inner">
-
           <!-- Sección: Animación ──────────────────────────────────────────── -->
           <div class="settings-section">
             <p class="settings-heading">Animación</p>
@@ -209,15 +243,29 @@
             </div>
 
             <div class="settings-row">
-              <button class="btn btn-sm" id="btn-save-preset" aria-label="Guardar preset">💾 Guardar</button>
-              <button class="btn btn-sm" id="btn-export-preset" aria-label="Exportar preset como JSON">⬇ JSON</button>
+              <button
+                class="btn btn-sm"
+                id="btn-save-preset"
+                aria-label="Guardar preset"
+              >
+                💾 Guardar
+              </button>
+              <button
+                class="btn btn-sm"
+                id="btn-export-preset"
+                aria-label="Exportar preset como JSON"
+              >
+                ⬇ JSON
+              </button>
               <!-- Importar JSON: label actúa de botón para el input oculto -->
-              <label class="btn btn-sm" for="import-preset-file">⬆ Importar</label>
+              <label class="btn btn-sm" for="import-preset-file"
+                >⬆ Importar</label
+              >
               <input
                 type="file"
                 id="import-preset-file"
                 accept=".json"
-                style="display:none"
+                style="display: none"
               />
             </div>
 
@@ -226,8 +274,20 @@
               <select id="preset-select">
                 <option value="">— seleccionar —</option>
               </select>
-              <button class="btn btn-sm" id="btn-load-preset" aria-label="Cargar preset seleccionado">Cargar</button>
-              <button class="btn btn-sm" id="btn-delete-preset" aria-label="Borrar preset seleccionado">Borrar</button>
+              <button
+                class="btn btn-sm"
+                id="btn-load-preset"
+                aria-label="Cargar preset seleccionado"
+              >
+                Cargar
+              </button>
+              <button
+                class="btn btn-sm"
+                id="btn-delete-preset"
+                aria-label="Borrar preset seleccionado"
+              >
+                Borrar
+              </button>
             </div>
 
             <p id="preset-status" class="preset-status"></p>
@@ -237,36 +297,92 @@
           <div class="settings-section">
             <div class="settings-heading-row">
               <p class="settings-heading">Efectos</p>
-              <button class="btn btn-sm" id="btn-toggle-effects" title="Activar o desactivar todos los efectos de una vez">
+              <button
+                class="btn btn-sm"
+                id="btn-toggle-effects"
+                title="Activar o desactivar todos los efectos de una vez"
+              >
                 Desactivar todos
               </button>
             </div>
 
             <div class="settings-row">
               <label for="idle-float-checkbox">Flotación idle</label>
-              <input type="checkbox" id="idle-float-checkbox" checked title="Oscilación suave post-entrada" />
-              <input type="range" id="idle-float-amp-slider" min="0" max="30" step="1" value="8" aria-label="Amplitud de flotación" />
+              <input
+                type="checkbox"
+                id="idle-float-checkbox"
+                checked
+                title="Oscilación suave post-entrada"
+              />
+              <input
+                type="range"
+                id="idle-float-amp-slider"
+                min="0"
+                max="30"
+                step="1"
+                value="8"
+                aria-label="Amplitud de flotación"
+              />
               <span class="val-label" id="idle-float-amp-label">8px</span>
             </div>
 
             <div class="settings-row">
               <label for="cam-breathing-checkbox">Respiración cámara</label>
-              <input type="checkbox" id="cam-breathing-checkbox" checked title="Zoom y balanceo orgánico de cámara" />
-              <input type="range" id="cam-breathing-sway-slider" min="0" max="50" step="1" value="12" aria-label="Amplitud de balanceo" />
+              <input
+                type="checkbox"
+                id="cam-breathing-checkbox"
+                checked
+                title="Zoom y balanceo orgánico de cámara"
+              />
+              <input
+                type="range"
+                id="cam-breathing-sway-slider"
+                min="0"
+                max="50"
+                step="1"
+                value="12"
+                aria-label="Amplitud de balanceo"
+              />
               <span class="val-label" id="cam-breathing-sway-label">12px</span>
             </div>
 
             <div class="settings-row">
               <label for="particles-checkbox">Partículas</label>
-              <input type="checkbox" id="particles-checkbox" checked title="Partículas ambientales ascendentes" />
-              <input type="range" id="particles-count-slider" min="0" max="500" step="10" value="200" aria-label="Cantidad de partículas" />
+              <input
+                type="checkbox"
+                id="particles-checkbox"
+                checked
+                title="Partículas ambientales ascendentes"
+              />
+              <input
+                type="range"
+                id="particles-count-slider"
+                min="0"
+                max="500"
+                step="10"
+                value="200"
+                aria-label="Cantidad de partículas"
+              />
               <span class="val-label" id="particles-count-label">200</span>
             </div>
 
             <div class="settings-row">
               <label for="glow-checkbox">Halo (glow)</label>
-              <input type="checkbox" id="glow-checkbox" checked title="Halo radial suave detrás de cada imagen" />
-              <input type="range" id="glow-intensity-slider" min="0" max="1" step="0.05" value="0.55" aria-label="Intensidad del halo" />
+              <input
+                type="checkbox"
+                id="glow-checkbox"
+                checked
+                title="Halo radial suave detrás de cada imagen"
+              />
+              <input
+                type="range"
+                id="glow-intensity-slider"
+                min="0"
+                max="1"
+                step="0.05"
+                value="0.55"
+                aria-label="Intensidad del halo"
+              />
               <span class="val-label" id="glow-intensity-label">0.55</span>
             </div>
           </div>
@@ -274,6 +390,14 @@
           <!-- Sección: Exportación ───────────────────────────────────────── -->
           <div class="settings-section">
             <p class="settings-heading">Exportación</p>
+
+            <div class="settings-row">
+              <label for="renderer-select">Motor de render</label>
+              <select id="renderer-select" title="Motor de renderizado">
+                <option value="p5" selected>p5.js (Canvas 2D)</option>
+                <option value="three">Three.js (WebGL 3D)</option>
+              </select>
+            </div>
 
             <div class="settings-row">
               <label for="fps-select">FPS</label>
@@ -286,27 +410,42 @@
             <div class="settings-row">
               <label for="capture-select">Motor</label>
               <select id="capture-select" title="Motor de captura de video">
-                <option value="ccapture" selected>CCapture (recomendado)</option>
+                <option value="ccapture" selected>
+                  CCapture (recomendado)
+                </option>
                 <option value="mediarecorder">MediaRecorder</option>
               </select>
             </div>
 
             <div class="settings-row">
               <label for="transparent-checkbox">Fondo transparente</label>
-              <input type="checkbox" id="transparent-checkbox" title="Exportar sin fondo (canal alfa)" />
+              <input
+                type="checkbox"
+                id="transparent-checkbox"
+                title="Exportar sin fondo (canal alfa)"
+              />
             </div>
 
             <div class="settings-row ffmpeg-row">
               <label>Convertir a MP4</label>
-              <code>ffmpeg -i mandala.webm -c:v libx264 -crf 17 -pix_fmt yuv420p out.mp4</code>
+              <code
+                >ffmpeg -i mandala.webm -c:v libx264 -crf 17 -pix_fmt yuv420p
+                out.mp4</code
+              >
             </div>
 
-            <div class="settings-row ffmpeg-row" id="ffmpeg-alpha-row" style="display:none">
+            <div
+              class="settings-row ffmpeg-row"
+              id="ffmpeg-alpha-row"
+              style="display: none"
+            >
               <label>Alpha → VP9</label>
-              <code>ffmpeg -i mandala_transparent.webm -c:v libvpx-vp9 -pix_fmt yuva420p out_alpha.webm</code>
+              <code
+                >ffmpeg -i mandala_transparent.webm -c:v libvpx-vp9 -pix_fmt
+                yuva420p out_alpha.webm</code
+              >
             </div>
           </div>
-
         </div>
       </div>
     </div>

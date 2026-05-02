@@ -7,14 +7,11 @@ export default defineConfig({
     include: ["tests/**/*.test.js"],
     coverage: {
       provider: "v8",
-      include: [
-        "js/geometry.js",
-        "js/geometry-patterns.js",
-        "js/animator.js",
-        "js/renderer-p5.js",
-        "js/presets.js",
-      ],
-      exclude: [],
+      include: ["js/**.js"],
+      // main.js requires full browser DOM (AppState, event handlers, UI binding).
+      // exporter.js requires CCapture and MediaRecorder (browser-only globals).
+      // Both are tested manually; unit tests would be integration tests requiring jsdom + stubs.
+      exclude: ["js/main.js", "js/exporter.js"],
       reporter: ["text", "lcov"],
       thresholds: {
         statements: 95,

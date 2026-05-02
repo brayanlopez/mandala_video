@@ -15,6 +15,12 @@ export default [
     },
     rules: {
       "no-console": "off", // Se usa para warnings de debug (renderer, presets)
+      "no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_", // Ignorar variables que empiezan con _ (e.g. _event, _delta)
+        },
+      ],
     },
   },
   {

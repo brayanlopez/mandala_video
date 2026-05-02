@@ -90,16 +90,7 @@ function makeSlot(x, y, angleDeg, ring, slotIndex, imgSize, order) {
 /**
  * Genera `count` posiciones en un anillo, con offset de rotación opcional.
  */
-function ring(
-  cx,
-  cy,
-  count,
-  radius,
-  startDeg,
-  imgSize,
-  ringIdx,
-  orderOffset = 0,
-) {
+function ring(cx, cy, count, radius, startDeg, imgSize, ringIdx, orderOffset = 0) {
   const slots = [];
   for (let i = 0; i < count; i++) {
     const angleDeg = count === 1 ? 0 : (360 / count) * i + startDeg;
@@ -189,9 +180,7 @@ export function computeEstrellaLayout(config) {
   groups.forEach(([count, rFactor, startDeg, imgSize], ringIdx) => {
     const r = minDim * rFactor;
     const offset = slots.length;
-    ring(cx, cy, count, r, startDeg, imgSize, ringIdx, offset).forEach((s) =>
-      slots.push(s),
-    );
+    ring(cx, cy, count, r, startDeg, imgSize, ringIdx, offset).forEach((s) => slots.push(s));
   });
 
   return assignImages(slots, pool);
@@ -234,18 +223,14 @@ export function computeFlorLayout(config) {
 
   // Ordenar: primero por capa (entrada del centro hacia afuera),
   // luego por ángulo pre-computado dentro de la capa para entrada en espiral
-  cells.sort((a, b) =>
-    a.layer !== b.layer ? a.layer - b.layer : a.angle - b.angle,
-  );
+  cells.sort((a, b) => (a.layer !== b.layer ? a.layer - b.layer : a.angle - b.angle));
 
   const slots = cells.map((cell, i) => {
     // Conversión axial → pixel (hex puntiagudo hacia arriba)
-    const px =
-      cx + spacing * (Math.sqrt(3) * cell.q + (Math.sqrt(3) / 2) * cell.r);
+    const px = cx + spacing * (Math.sqrt(3) * cell.q + (Math.sqrt(3) / 2) * cell.r);
     const py = cy + spacing * ((3 / 2) * cell.r);
     const angleDeg = Math.atan2(cell.r, cell.q) / DEG;
-    const imgSize =
-      SIZE_BY_LAYER[Math.min(cell.layer, SIZE_BY_LAYER.length - 1)];
+    const imgSize = SIZE_BY_LAYER[Math.min(cell.layer, SIZE_BY_LAYER.length - 1)];
 
     return makeSlot(px, py, angleDeg, cell.layer, i, imgSize, i);
   });
@@ -283,9 +268,7 @@ export function computeCuadriculaLayout(config) {
   groups.forEach(([count, rFactor, startDeg, imgSize], ringIdx) => {
     const r = minDim * rFactor;
     const offset = slots.length;
-    ring(cx, cy, count, r, startDeg, imgSize, ringIdx, offset).forEach((s) =>
-      slots.push(s),
-    );
+    ring(cx, cy, count, r, startDeg, imgSize, ringIdx, offset).forEach((s) => slots.push(s));
   });
 
   return assignImages(slots, pool);
@@ -322,9 +305,7 @@ export function computePentagonoLayout(config) {
   groups.forEach(([count, rFactor, startDeg, imgSize], ringIdx) => {
     const r = minDim * rFactor;
     const offset = slots.length;
-    ring(cx, cy, count, r, startDeg, imgSize, ringIdx, offset).forEach((s) =>
-      slots.push(s),
-    );
+    ring(cx, cy, count, r, startDeg, imgSize, ringIdx, offset).forEach((s) => slots.push(s));
   });
 
   return assignImages(slots, pool);
@@ -406,16 +387,13 @@ export function computeDiamanteLayout(config) {
     }
   }
 
-  cells.sort((a, b) =>
-    a.layer !== b.layer ? a.layer - b.layer : a.angle - b.angle,
-  );
+  cells.sort((a, b) => (a.layer !== b.layer ? a.layer - b.layer : a.angle - b.angle));
 
   const slots = cells.map((cell, i) => {
     const px = cx + spacing * cell.q;
     const py = cy + spacing * cell.r;
     const angleDeg = (cell.angle / DEG + 360) % 360;
-    const imgSize =
-      SIZE_BY_LAYER[Math.min(cell.layer, SIZE_BY_LAYER.length - 1)];
+    const imgSize = SIZE_BY_LAYER[Math.min(cell.layer, SIZE_BY_LAYER.length - 1)];
     return makeSlot(px, py, angleDeg, cell.layer, i, imgSize, i);
   });
 
@@ -486,17 +464,7 @@ export function computeRosaLayout(config) {
       const y = cy + r * Math.sin(theta);
       // Tamaño mayor en la punta (cos→1) y menor en la base (cos→0)
       const size = Math.round(65 + 35 * Math.cos(K * offset));
-      slots.push(
-        makeSlot(
-          x,
-          y,
-          (theta / DEG + 360) % 360,
-          p,
-          j,
-          size,
-          p * PER_PETAL + j,
-        ),
-      );
+      slots.push(makeSlot(x, y, (theta / DEG + 360) % 360, p, j, size, p * PER_PETAL + j));
     }
   }
 
@@ -646,9 +614,7 @@ export function computeArquimedesLayout(config) {
     const x = cx + r * Math.cos(angle);
     const y = cy + r * Math.sin(angle);
     const size = Math.round(110 - 62 * t); // decrece del centro al borde
-    slots.push(
-      makeSlot(x, y, (((angle / DEG) % 360) + 360) % 360, 0, i, size, i),
-    );
+    slots.push(makeSlot(x, y, (((angle / DEG) % 360) + 360) % 360, 0, i, size, i));
   }
 
   return assignImages(slots, pool);

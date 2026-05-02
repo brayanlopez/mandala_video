@@ -108,7 +108,6 @@ export class Exporter {
     if (this._renderer) this._renderer.pauseEffects();
 
     // CCapture se carga como script global desde el HTML
-    // eslint-disable-next-line no-undef
     if (typeof CCapture === "undefined") {
       console.error(
         "[Exporter] CCapture no está disponible. Verificá que el script esté incluido en index.html.",
@@ -214,14 +213,8 @@ export class Exporter {
   }
 
   _getSupportedMimeType() {
-    const candidates = [
-      "video/webm;codecs=vp9",
-      "video/webm;codecs=vp8",
-      "video/webm",
-    ];
-    return (
-      candidates.find((t) => MediaRecorder.isTypeSupported(t)) || "video/webm"
-    );
+    const candidates = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+    return candidates.find((t) => MediaRecorder.isTypeSupported(t)) || "video/webm";
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -232,8 +225,7 @@ export class Exporter {
    */
   _getTotalFrames() {
     const durationSec =
-      this._config.export.durationSeconds ??
-      this._animator.totalDurationMs / 1000;
+      this._config.export.durationSeconds ?? this._animator.totalDurationMs / 1000;
     return Math.ceil(durationSec * this._config.canvas.fps);
   }
 
@@ -249,7 +241,7 @@ export class Exporter {
     const a = document.createElement("a");
 
     // Sanitizar nombre de archivo: solo alfanuméricos, -, _, .
-    const safeName = filename.replace(/[^a-zA-Z0-9._\-]/g, "_");
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
 
     a.href = url;
     a.download = safeName;

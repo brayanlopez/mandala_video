@@ -154,14 +154,8 @@ async function onRendererReady() {
   );
 
   // 4. Instanciar animator y exporter
-  if (AppState.renderer.setSlotMetadata)
-    AppState.renderer.setSlotMetadata(AppState.slots);
-  AppState.animator = new Animator(
-    AppState.renderer,
-    AppState.slots,
-    AppState.images,
-    CONFIG,
-  );
+  if (AppState.renderer.setSlotMetadata) AppState.renderer.setSlotMetadata(AppState.slots);
+  AppState.animator = new Animator(AppState.renderer, AppState.slots, AppState.images, CONFIG);
   AppState.exporter = new Exporter(
     AppState.renderer.getCanvas(),
     CONFIG,
@@ -226,14 +220,8 @@ async function switchPattern(patternName) {
   );
 
   // Reinstanciar animator y exporter con los nuevos slots
-  if (AppState.renderer.setSlotMetadata)
-    AppState.renderer.setSlotMetadata(AppState.slots);
-  AppState.animator = new Animator(
-    AppState.renderer,
-    AppState.slots,
-    AppState.images,
-    CONFIG,
-  );
+  if (AppState.renderer.setSlotMetadata) AppState.renderer.setSlotMetadata(AppState.slots);
+  AppState.animator = new Animator(AppState.renderer, AppState.slots, AppState.images, CONFIG);
   AppState.exporter = new Exporter(
     AppState.renderer.getCanvas(),
     CONFIG,
@@ -276,28 +264,17 @@ async function switchRenderer(engineName) {
   CONFIG.renderer.engine = engineName;
 
   await new Promise((resolve) => {
-    AppState.renderer.init(
-      "canvas-container",
-      CONFIG.canvas.width,
-      CONFIG.canvas.height,
-      resolve,
-    );
+    AppState.renderer.init("canvas-container", CONFIG.canvas.width, CONFIG.canvas.height, resolve);
   });
 
   // Slot metadata y recarga de imágenes (tipos incompatibles entre motores)
-  if (AppState.renderer.setSlotMetadata)
-    AppState.renderer.setSlotMetadata(AppState.slots);
+  if (AppState.renderer.setSlotMetadata) AppState.renderer.setSlotMetadata(AppState.slots);
   AppState.images = await loadAllImages();
 
   const loaded = AppState.images.filter(Boolean).length;
   setStatus(`${label} — ${loaded}/${AppState.slots.length} imágenes.`);
 
-  AppState.animator = new Animator(
-    AppState.renderer,
-    AppState.slots,
-    AppState.images,
-    CONFIG,
-  );
+  AppState.animator = new Animator(AppState.renderer, AppState.slots, AppState.images, CONFIG);
   AppState.exporter = new Exporter(
     AppState.renderer.getCanvas(),
     CONFIG,
@@ -311,9 +288,7 @@ async function switchRenderer(engineName) {
 // ─── Carga de imágenes ────────────────────────────────────────────────────
 
 async function loadAllImages() {
-  return Promise.all(
-    AppState.slots.map((s) => AppState.renderer.loadImage(s.imageSrc)),
-  );
+  return Promise.all(AppState.slots.map((s) => AppState.renderer.loadImage(s.imageSrc)));
 }
 
 // ─── Preview ──────────────────────────────────────────────────────────────
@@ -531,9 +506,7 @@ function bindSettingsToggle() {
 
 function bindSpeedSlider() {
   // Efecto inmediato — no requiere reinicio de animación
-  bindSlider(UI.speedSlider, UI.speedLabel, 0.1, 4.0, 1, "×", (v) =>
-    AppState.animator.setSpeed(v),
-  );
+  bindSlider(UI.speedSlider, UI.speedLabel, 0.1, 4.0, 1, "×", (v) => AppState.animator.setSpeed(v));
 }
 
 function bindImgScaleSlider() {
@@ -552,30 +525,16 @@ function bindRotationSlider() {
 
 function bindStaggerSlider() {
   // Requiere reinicio para consistencia visual
-  bindRestartingSlider(
-    UI.staggerSlider,
-    UI.staggerLabel,
-    0,
-    2000,
-    "ms",
-    (v) => {
-      CONFIG.animation.staggerDelay = v;
-    },
-  );
+  bindRestartingSlider(UI.staggerSlider, UI.staggerLabel, 0, 2000, "ms", (v) => {
+    CONFIG.animation.staggerDelay = v;
+  });
 }
 
 function bindDurationSlider() {
   // Requiere reinicio para consistencia visual
-  bindRestartingSlider(
-    UI.durationSlider,
-    UI.durationLabel,
-    100,
-    3000,
-    "ms",
-    (v) => {
-      CONFIG.animation.entryDuration = v;
-    },
-  );
+  bindRestartingSlider(UI.durationSlider, UI.durationLabel, 100, 3000, "ms", (v) => {
+    CONFIG.animation.entryDuration = v;
+  });
 }
 
 // ── Selects y checkboxes ──────────────────────────────────────────────────
@@ -639,13 +598,8 @@ function bindTransparentCheckbox() {
   UI.transparentCheckbox.addEventListener("change", () => {
     CONFIG.export.transparentBg = UI.transparentCheckbox.checked;
     UI.bgColorInput.disabled = UI.transparentCheckbox.checked;
-    UI.canvasArea.classList.toggle(
-      "transparent-mode",
-      UI.transparentCheckbox.checked,
-    );
-    UI.ffmpegAlphaRow.style.display = UI.transparentCheckbox.checked
-      ? ""
-      : "none";
+    UI.canvasArea.classList.toggle("transparent-mode", UI.transparentCheckbox.checked);
+    UI.ffmpegAlphaRow.style.display = UI.transparentCheckbox.checked ? "" : "none";
   });
 }
 
@@ -691,8 +645,7 @@ function bindPresetControls() {
     const a = document.createElement("a");
     const raw = UI.presetNameInput.value.trim() || "mandala-preset";
     // Sanitizar nombre para nombre de archivo (CWE-22 / nombres seguros)
-    const safeName =
-      raw.replace(/[^a-zA-Z0-9\-_ .]/g, "_").slice(0, 50) || "preset";
+    const safeName = raw.replace(/[^a-zA-Z0-9\-_ .]/g, "_").slice(0, 50) || "preset";
     a.href = url;
     a.download = `${safeName}.json`;
     a.click();
@@ -766,9 +719,7 @@ function _syncToggleEffectsBtn() {
     CONFIG.effects.cameraBreathing.enabled &&
     CONFIG.effects.particles.enabled &&
     CONFIG.effects.glow.enabled;
-  UI.btnToggleEffects.textContent = allOn
-    ? "Desactivar todos"
-    : "Activar todos";
+  UI.btnToggleEffects.textContent = allOn ? "Desactivar todos" : "Activar todos";
 }
 
 function bindEffectsControls() {
@@ -802,17 +753,9 @@ function bindEffectsControls() {
   });
 
   // Flotación idle — amplitud (efecto inmediato)
-  bindSlider(
-    UI.idleFloatAmpSlider,
-    UI.idleFloatAmpLabel,
-    0,
-    30,
-    0,
-    "px",
-    (v) => {
-      CONFIG.effects.idleFloat.amplitude = v;
-    },
-  );
+  bindSlider(UI.idleFloatAmpSlider, UI.idleFloatAmpLabel, 0, 30, 0, "px", (v) => {
+    CONFIG.effects.idleFloat.amplitude = v;
+  });
 
   // Respiración de cámara — toggle
   UI.camBreathingCheckbox.addEventListener("change", () => {
@@ -821,17 +764,9 @@ function bindEffectsControls() {
   });
 
   // Respiración de cámara — amplitud de balanceo (efecto inmediato)
-  bindSlider(
-    UI.camBreathingSwaySlider,
-    UI.camBreathingSwayLabel,
-    0,
-    50,
-    0,
-    "px",
-    (v) => {
-      CONFIG.effects.cameraBreathing.swayAmp = v;
-    },
-  );
+  bindSlider(UI.camBreathingSwaySlider, UI.camBreathingSwayLabel, 0, 50, 0, "px", (v) => {
+    CONFIG.effects.cameraBreathing.swayAmp = v;
+  });
 
   // Partículas — toggle (requiere reiniciar el array)
   UI.particlesCheckbox.addEventListener("change", () => {
@@ -842,9 +777,7 @@ function bindEffectsControls() {
 
   // Partículas — cantidad (requiere reiniciar el array para redimensionarlo)
   UI.particlesCountSlider.addEventListener("input", () => {
-    const v = Math.round(
-      clamp(parseFloat(UI.particlesCountSlider.value), 0, 500),
-    );
+    const v = Math.round(clamp(parseFloat(UI.particlesCountSlider.value), 0, 500));
     CONFIG.effects.particles.count = v;
     UI.particlesCountLabel.textContent = String(v);
     AppState.animator.reinitParticles();
@@ -857,17 +790,9 @@ function bindEffectsControls() {
   });
 
   // Halo (glow) — intensidad (efecto inmediato)
-  bindSlider(
-    UI.glowIntensitySlider,
-    UI.glowIntensityLabel,
-    0,
-    1,
-    2,
-    "",
-    (v) => {
-      CONFIG.effects.glow.intensity = v;
-    },
-  );
+  bindSlider(UI.glowIntensitySlider, UI.glowIntensityLabel, 0, 1, 2, "", (v) => {
+    CONFIG.effects.glow.intensity = v;
+  });
 }
 
 // ── Orquestador ───────────────────────────────────────────────────────────
@@ -926,20 +851,14 @@ function syncUIFromConfig() {
   UI.patternSelect.value = AppState.currentPattern;
   UI.transparentCheckbox.checked = CONFIG.export.transparentBg ?? false;
   UI.bgColorInput.disabled = CONFIG.export.transparentBg ?? false;
-  UI.canvasArea.classList.toggle(
-    "transparent-mode",
-    CONFIG.export.transparentBg ?? false,
-  );
-  UI.ffmpegAlphaRow.style.display =
-    (CONFIG.export.transparentBg ?? false) ? "" : "none";
+  UI.canvasArea.classList.toggle("transparent-mode", CONFIG.export.transparentBg ?? false);
+  UI.ffmpegAlphaRow.style.display = (CONFIG.export.transparentBg ?? false) ? "" : "none";
   // Efectos
   UI.idleFloatCheckbox.checked = CONFIG.effects.idleFloat.enabled;
   UI.idleFloatAmpSlider.value = String(CONFIG.effects.idleFloat.amplitude);
   UI.idleFloatAmpLabel.textContent = `${CONFIG.effects.idleFloat.amplitude}px`;
   UI.camBreathingCheckbox.checked = CONFIG.effects.cameraBreathing.enabled;
-  UI.camBreathingSwaySlider.value = String(
-    CONFIG.effects.cameraBreathing.swayAmp,
-  );
+  UI.camBreathingSwaySlider.value = String(CONFIG.effects.cameraBreathing.swayAmp);
   UI.camBreathingSwayLabel.textContent = `${CONFIG.effects.cameraBreathing.swayAmp}px`;
   UI.particlesCheckbox.checked = CONFIG.effects.particles.enabled;
   UI.particlesCountSlider.value = String(CONFIG.effects.particles.count);
@@ -982,21 +901,15 @@ async function applyPresetData(data) {
   // Aplicar animación
   const a = data.animation ?? {};
   if (typeof a.speed === "number") CONFIG.animation.speed = a.speed;
-  if (typeof a.staggerDelay === "number")
-    CONFIG.animation.staggerDelay = a.staggerDelay;
-  if (typeof a.entryDuration === "number")
-    CONFIG.animation.entryDuration = a.entryDuration;
-  if (typeof a.entryEffect === "string")
-    CONFIG.animation.entryEffect = a.entryEffect;
-  if (typeof a.rotationSpeed === "number")
-    CONFIG.animation.rotationSpeed = a.rotationSpeed;
-  if (typeof a.loopAnimation === "boolean")
-    CONFIG.animation.loopAnimation = a.loopAnimation;
+  if (typeof a.staggerDelay === "number") CONFIG.animation.staggerDelay = a.staggerDelay;
+  if (typeof a.entryDuration === "number") CONFIG.animation.entryDuration = a.entryDuration;
+  if (typeof a.entryEffect === "string") CONFIG.animation.entryEffect = a.entryEffect;
+  if (typeof a.rotationSpeed === "number") CONFIG.animation.rotationSpeed = a.rotationSpeed;
+  if (typeof a.loopAnimation === "boolean") CONFIG.animation.loopAnimation = a.loopAnimation;
 
   // Aplicar export
   const ex = data.export ?? {};
-  if (typeof ex.captureMode === "string")
-    CONFIG.export.captureMode = ex.captureMode;
+  if (typeof ex.captureMode === "string") CONFIG.export.captureMode = ex.captureMode;
 
   // Reflejar en los controles UI
   syncUIFromConfig();

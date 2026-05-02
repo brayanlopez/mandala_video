@@ -81,9 +81,7 @@ export function savePreset(name, data) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
   } catch (e) {
     if (e.name === "QuotaExceededError") {
-      throw new Error(
-        "Almacenamiento lleno — eliminá presets antiguos para liberar espacio",
-      );
+      throw new Error("Almacenamiento lleno — eliminá presets antiguos para liberar espacio");
     }
     throw e;
   }
@@ -159,9 +157,7 @@ export function presetFromJSON(json) {
     throw new Error("Formato de preset inválido");
   }
   if (data.version !== PRESET_VERSION) {
-    throw new Error(
-      `Versión de preset incompatible (esperada: ${PRESET_VERSION})`,
-    );
+    throw new Error(`Versión de preset incompatible (esperada: ${PRESET_VERSION})`);
   }
   requireObject(data, "animation");
   requireObject(data, "canvas");

@@ -116,7 +116,7 @@ export function sanitizePath(path) {
         seg !== "" &&
         seg !== "." &&
         seg !== ".." && // bloquear traversal
-        /^[\w\s.\-]+$/.test(seg), // solo caracteres seguros por segmento
+        /^[\w\s.-]+$/.test(seg), // solo caracteres seguros por segmento
     );
 
   return segments.join("/");

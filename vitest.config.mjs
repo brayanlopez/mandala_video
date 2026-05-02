@@ -1,6 +1,15 @@
 import { defineConfig } from "vitest/config";
+import { resolve } from "path";
 
 export default defineConfig({
+  resolve: {
+    alias: [
+      {
+        find: /.*\/lib\/three\.module\.js$/,
+        replacement: resolve("node_modules/three/build/three.module.js"),
+      },
+    ],
+  },
   test: {
     globals: true,
     environment: "node",

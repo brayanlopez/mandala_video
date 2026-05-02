@@ -27,9 +27,7 @@ const Easing = {
   /** Elástico al final */
   easeOutElastic: (t) => {
     if (t === 0 || t === 1) return t;
-    return (
-      Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1
-    );
+    return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1;
   },
 
   /** Rebote tipo pelota: 3 sub-rebotes decrecientes antes de detenerse */
@@ -249,10 +247,7 @@ export class Animator {
     this._renderer.clear(bgColor);
 
     // ─── Partículas ambientales (se dibujan bajo los slots) ─────────────────
-    if (
-      this._config.effects?.particles?.enabled &&
-      this._particles.length > 0
-    ) {
+    if (this._config.effects?.particles?.enabled && this._particles.length > 0) {
       const wrapY = this._config.canvas.height;
       for (const p of this._particles) {
         p.y -= p.vy;
@@ -321,8 +316,7 @@ export class Animator {
         case "shrink":
           // Aparece a SHRINK_INITIAL_SCALE× y se contrae a su tamaño final
           s.alpha = Easing.easeOutCubic(t);
-          s.scale =
-            1 + (SHRINK_INITIAL_SCALE - 1) * (1 - Easing.easeOutCubic(t));
+          s.scale = 1 + (SHRINK_INITIAL_SCALE - 1) * (1 - Easing.easeOutCubic(t));
           s.extraRotDeg = 0;
           break;
 
@@ -359,9 +353,7 @@ export class Animator {
           // Cae desde una altura proporcional al canvas con rebote
           finalY =
             slot.y -
-            this._config.canvas.height *
-              DROP_HEIGHT_FACTOR *
-              (1 - Easing.easeOutBounce(t));
+            this._config.canvas.height * DROP_HEIGHT_FACTOR * (1 - Easing.easeOutBounce(t));
         } else if (entryEffect === "slideOut") {
           // Entra desde fuera del canvas en la dirección radial del slot
           const factor = SLIDE_OUT_FACTOR * (1 - Easing.easeOutCubic(t));
@@ -375,8 +367,7 @@ export class Animator {
       // lo que garantiza que ningún par de slots bote en sincronía.
       if (t >= 1 && this._config.effects?.idleFloat?.enabled) {
         const { amplitude, speed } = this._config.effects.idleFloat;
-        finalY +=
-          Math.sin(this._elapsed * speed + i * GOLDEN_ANGLE_RAD) * amplitude;
+        finalY += Math.sin(this._elapsed * speed + i * GOLDEN_ANGLE_RAD) * amplitude;
       }
 
       // ─── Cámara: aplicar escala global y balanceo ──────────────────────────
@@ -388,13 +379,7 @@ export class Animator {
       if (this._config.effects?.glow?.enabled) {
         const { radiusMultiplier, intensity } = this._config.effects.glow;
         const glowSize = slot.imgSize * radiusMultiplier * camScale;
-        this._renderer.drawGlow(
-          finalX,
-          finalY,
-          glowSize,
-          s.alpha * intensity,
-          "#ffffff",
-        );
+        this._renderer.drawGlow(finalX, finalY, glowSize, s.alpha * intensity, "#ffffff");
       }
 
       this._renderer.drawImage(

@@ -308,7 +308,7 @@ input[type="checkbox"]:disabled {
 }
 
 .settings-panel.open {
-  max-height: 400px;
+  max-height: 500px;
 }
 
 .settings-inner {
@@ -334,6 +334,20 @@ input[type="checkbox"]:disabled {
   color: var(--accent);
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
+}
+
+/* Heading con botón inline (ej: sección Efectos) */
+.settings-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-heading-row .settings-heading {
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .settings-row {
@@ -396,12 +410,8 @@ input[type="checkbox"]:disabled {
   color: var(--text-dim);
   min-height: 14px;
 }
-.preset-status.ok {
-  color: var(--success);
-}
-.preset-status.err {
-  color: var(--danger);
-}
+.preset-status.ok  { color: var(--success); }
+.preset-status.err { color: var(--danger);  }
 
 /* Botón de ajustes con estado activo */
 .btn.active {
@@ -419,9 +429,5 @@ input[type="checkbox"]:disabled {
     linear-gradient(45deg, transparent 75%, #888 75%),
     linear-gradient(-45deg, transparent 75%, #888 75%);
   background-size: 24px 24px;
-  background-position:
-    0 0,
-    0 12px,
-    12px -12px,
-    -12px 0px;
+  background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
 }

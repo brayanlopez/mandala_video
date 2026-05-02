@@ -233,6 +233,44 @@
             <p id="preset-status" class="preset-status"></p>
           </div>
 
+          <!-- Sección: Efectos ──────────────────────────────────────────── -->
+          <div class="settings-section">
+            <div class="settings-heading-row">
+              <p class="settings-heading">Efectos</p>
+              <button class="btn btn-sm" id="btn-toggle-effects" title="Activar o desactivar todos los efectos de una vez">
+                Desactivar todos
+              </button>
+            </div>
+
+            <div class="settings-row">
+              <label for="idle-float-checkbox">Flotación idle</label>
+              <input type="checkbox" id="idle-float-checkbox" checked title="Oscilación suave post-entrada" />
+              <input type="range" id="idle-float-amp-slider" min="0" max="30" step="1" value="8" aria-label="Amplitud de flotación" />
+              <span class="val-label" id="idle-float-amp-label">8px</span>
+            </div>
+
+            <div class="settings-row">
+              <label for="cam-breathing-checkbox">Respiración cámara</label>
+              <input type="checkbox" id="cam-breathing-checkbox" checked title="Zoom y balanceo orgánico de cámara" />
+              <input type="range" id="cam-breathing-sway-slider" min="0" max="50" step="1" value="12" aria-label="Amplitud de balanceo" />
+              <span class="val-label" id="cam-breathing-sway-label">12px</span>
+            </div>
+
+            <div class="settings-row">
+              <label for="particles-checkbox">Partículas</label>
+              <input type="checkbox" id="particles-checkbox" checked title="Partículas ambientales ascendentes" />
+              <input type="range" id="particles-count-slider" min="0" max="500" step="10" value="200" aria-label="Cantidad de partículas" />
+              <span class="val-label" id="particles-count-label">200</span>
+            </div>
+
+            <div class="settings-row">
+              <label for="glow-checkbox">Halo (glow)</label>
+              <input type="checkbox" id="glow-checkbox" checked title="Halo radial suave detrás de cada imagen" />
+              <input type="range" id="glow-intensity-slider" min="0" max="1" step="0.05" value="0.55" aria-label="Intensidad del halo" />
+              <span class="val-label" id="glow-intensity-label">0.55</span>
+            </div>
+          </div>
+
           <!-- Sección: Exportación ───────────────────────────────────────── -->
           <div class="settings-section">
             <p class="settings-heading">Exportación</p>

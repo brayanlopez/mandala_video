@@ -49,6 +49,7 @@ globalThis.p5 = vi.fn(function P5Mock(sketchFn) {
 /**
  * Crea un mock de la instancia de p5 con los métodos mínimos que
  * _executeQueue() y flush() necesitan. No requiere la librería p5.js real.
+ * Incluye drawingContext para los comandos "glow" y "particle".
  */
 function makeP5Mock() {
   return {
@@ -64,6 +65,16 @@ function makeP5Mock() {
     redraw: vi.fn(),
     remove: vi.fn(),
     loadImage: vi.fn(),
+    drawingContext: {
+      createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      arc: vi.fn(),
+      fill: vi.fn(),
+      globalCompositeOperation: null,
+      fillStyle: null,
+    },
   };
 }
 
@@ -365,5 +376,256 @@ describe("P5Renderer.init", () => {
     lastSketch.draw();
     expect(lastSketch.background).toHaveBeenCalledWith("#000");
     expect(r._drawQueue).toHaveLength(0);
+  });
+});
+
+// ─── T-02: pauseEffects / tickEffects / resumeEffects ─────────────────────────
+
+describe("P5Renderer — efectos de export (pauseEffects / tickEffects / resumeEffects)", () => {
+  test("pauseEffects existe y es callable sin lanzar error", () => {
+    const r = makeReadyRenderer();
+    expect(() => r.pauseEffects()).not.toThrow();
+  });
+
+  test("tickEffects existe y es callable con un argumento numérico sin lanzar error", () => {
+    const r = makeReadyRenderer();
+    expect(() => r.tickEffects(16.67)).not.toThrow();
+  });
+
+  test("resumeEffects existe y es callable sin lanzar error", () => {
+    const r = makeReadyRenderer();
+    expect(() => r.resumeEffects()).not.toThrow();
+  });
+
+  test("los tres métodos no afectan el estado interno del renderer (no-ops)", () => {
+    const r = makeReadyRenderer();
+    const queueBefore = r._drawQueue.length;
+    r.pauseEffects();
+    r.tickEffects(100);
+    r.resumeEffects();
+    expect(r._drawQueue).toHaveLength(queueBefore);
+    expect(r._ready).toBe(true);
+  });
+});
+
+// ─── T-05: drawGlow ───────────────────────────────────────────────────────────
+
+describe("P5Renderer.drawGlow", () => {
+  test('encola un comando de tipo "glow" con los parámetros correctos', () => {
+    const r = makeReadyRenderer();
+    r.drawGlow(500, 300, 120, 0.6, "#ff00ff");
+    expect(r._drawQueue).toHaveLength(1);
+    expect(r._drawQueue[0]).toMatchObject({
+      type: "glow",
+      x: 500,
+      y: 300,
+      size: 120,
+      alpha: 0.6,
+      colorHex: "#ff00ff",
+    });
+  });
+
+  test("no encola si alpha <= 0", () => {
+    const r = makeReadyRenderer();
+    r.drawGlow(100, 100, 80, 0, "#ffffff");
+    expect(r._drawQueue).toHaveLength(0);
+  });
+
+  test("no encola si el renderer no está listo", () => {
+    const r = makeReadyRenderer();
+    r._ready = false;
+    r.drawGlow(100, 100, 80, 0.5, "#ffffff");
+    expect(r._drawQueue).toHaveLength(0);
+  });
+
+  test("_executeQueue llama a createRadialGradient con centro y radio correctos", () => {
+    const r = makeReadyRenderer();
+    r._drawQueue = [
+      {
+        type: "glow",
+        x: 200,
+        y: 150,
+        size: 100,
+        alpha: 0.5,
+        colorHex: "#ffffff",
+      },
+    ];
+    r._executeQueue();
+    const ctx = r._p.drawingContext;
+    // radio = size / 2 = 50
+    expect(ctx.createRadialGradient).toHaveBeenCalledWith(
+      200,
+      150,
+      0,
+      200,
+      150,
+      50,
+    );
+  });
+
+  test("_executeQueue llama a ctx.save y ctx.restore para aislar el blending", () => {
+    const r = makeReadyRenderer();
+    r._drawQueue = [
+      {
+        type: "glow",
+        x: 100,
+        y: 100,
+        size: 80,
+        alpha: 0.4,
+        colorHex: "#aabbcc",
+      },
+    ];
+    r._executeQueue();
+    const ctx = r._p.drawingContext;
+    expect(ctx.save).toHaveBeenCalled();
+    expect(ctx.restore).toHaveBeenCalled();
+  });
+
+  test("_executeQueue llama a addColorStop dos veces (centro opaco y borde transparente)", () => {
+    const r = makeReadyRenderer();
+    const mockGrad = { addColorStop: vi.fn() };
+    r._p.drawingContext.createRadialGradient.mockReturnValue(mockGrad);
+    r._drawQueue = [
+      {
+        type: "glow",
+        x: 100,
+        y: 100,
+        size: 80,
+        alpha: 0.5,
+        colorHex: "#ffffff",
+      },
+    ];
+    r._executeQueue();
+    expect(mockGrad.addColorStop).toHaveBeenCalledTimes(2);
+    // Stop 0: color con alpha; Stop 1: color con alpha=0
+    expect(mockGrad.addColorStop.mock.calls[0][0]).toBe(0);
+    expect(mockGrad.addColorStop.mock.calls[1][0]).toBe(1);
+    expect(mockGrad.addColorStop.mock.calls[1][1]).toContain("rgba");
+    expect(mockGrad.addColorStop.mock.calls[1][1]).toContain(",0)");
+  });
+
+  test("vacía la cola tras procesar el comando glow", () => {
+    const r = makeReadyRenderer();
+    r._drawQueue = [
+      {
+        type: "glow",
+        x: 100,
+        y: 100,
+        size: 80,
+        alpha: 0.5,
+        colorHex: "#ff0000",
+      },
+    ];
+    r._executeQueue();
+    expect(r._drawQueue).toHaveLength(0);
+  });
+});
+
+// ─── T-06: drawParticle ───────────────────────────────────────────────────────
+
+describe("P5Renderer.drawParticle", () => {
+  test('encola un comando de tipo "particle" con los parámetros correctos', () => {
+    const r = makeReadyRenderer();
+    r.drawParticle(300, 400, 6, 0.7, "#f9a8d4");
+    expect(r._drawQueue).toHaveLength(1);
+    expect(r._drawQueue[0]).toMatchObject({
+      type: "particle",
+      x: 300,
+      y: 400,
+      size: 6,
+      alpha: 0.7,
+      colorHex: "#f9a8d4",
+    });
+  });
+
+  test("no encola si alpha <= 0", () => {
+    const r = makeReadyRenderer();
+    r.drawParticle(100, 100, 4, 0, "#ffffff");
+    expect(r._drawQueue).toHaveLength(0);
+  });
+
+  test("no encola si el renderer no está listo", () => {
+    const r = makeReadyRenderer();
+    r._ready = false;
+    r.drawParticle(100, 100, 4, 0.5, "#ffffff");
+    expect(r._drawQueue).toHaveLength(0);
+  });
+
+  test("_executeQueue llama a ctx.arc con las coordenadas y radio correctos", () => {
+    const r = makeReadyRenderer();
+    r._drawQueue = [
+      {
+        type: "particle",
+        x: 150,
+        y: 250,
+        size: 8,
+        alpha: 0.4,
+        colorHex: "#c084fc",
+      },
+    ];
+    r._executeQueue();
+    const ctx = r._p.drawingContext;
+    // radio = size / 2 = 4
+    expect(ctx.arc).toHaveBeenCalledWith(150, 250, 4, 0, Math.PI * 2);
+  });
+
+  test("_executeQueue llama a ctx.save y ctx.restore", () => {
+    const r = makeReadyRenderer();
+    r._drawQueue = [
+      {
+        type: "particle",
+        x: 100,
+        y: 100,
+        size: 4,
+        alpha: 0.5,
+        colorHex: "#ffffff",
+      },
+    ];
+    r._executeQueue();
+    const ctx = r._p.drawingContext;
+    expect(ctx.save).toHaveBeenCalled();
+    expect(ctx.restore).toHaveBeenCalled();
+  });
+
+  test("_executeQueue llama a ctx.fill para dibujar el círculo", () => {
+    const r = makeReadyRenderer();
+    r._drawQueue = [
+      {
+        type: "particle",
+        x: 100,
+        y: 100,
+        size: 4,
+        alpha: 0.5,
+        colorHex: "#fcd34d",
+      },
+    ];
+    r._executeQueue();
+    expect(r._p.drawingContext.fill).toHaveBeenCalled();
+  });
+
+  test("procesa glow y particle en la misma cola sin error", () => {
+    const r = makeReadyRenderer();
+    const mockGrad = { addColorStop: vi.fn() };
+    r._p.drawingContext.createRadialGradient.mockReturnValue(mockGrad);
+    r._drawQueue = [
+      {
+        type: "glow",
+        x: 100,
+        y: 100,
+        size: 80,
+        alpha: 0.5,
+        colorHex: "#ffffff",
+      },
+      {
+        type: "particle",
+        x: 200,
+        y: 200,
+        size: 6,
+        alpha: 0.4,
+        colorHex: "#ff0000",
+      },
+    ];
+    expect(() => r._executeQueue()).not.toThrow();
+    expect(r._p.drawingContext.arc).toHaveBeenCalledTimes(2); // uno por glow, uno por particle
   });
 });

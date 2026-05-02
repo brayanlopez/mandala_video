@@ -79,6 +79,44 @@ export const CONFIG = {
     ],
   },
 
+  // ─── Efectos visuales continuos ──────────────────────────────────────────
+  //
+  // Todos los efectos son renderer-agnósticos: el estado vive en animator.js
+  // y el renderer solo recibe primitivas (coordenadas, colores, tamaños).
+  // Cada motor (p5, PixiJS, Three.js) implementa los comandos a su manera.
+  //
+  effects: {
+    // Flotación idle — oscilación sinusoidal per-slot tras la entrada
+    idleFloat: {
+      enabled: true,
+      amplitude: 8, // px — desplazamiento vertical máximo
+      speed: 0.0012, // rad/ms
+    },
+
+    // Respiración de cámara — escala + balanceo lateral global
+    cameraBreathing: {
+      enabled: true,
+      scaleAmp: 0.013, // amplitud fraccional de escala (1 ± 0.013)
+      swayAmp: 12, // px — balanceo horizontal máximo
+      speed: 0.0008, // rad/ms
+    },
+
+    // Partículas ambientales ascendentes
+    particles: {
+      enabled: true,
+      count: 200,
+      speed: 0.08, // px/ms — velocidad de desplazamiento vertical
+      palette: ["#f9a8d4", "#c084fc", "#fcd34d", "#6ee7b7", "#e9d5ff"],
+    },
+
+    // Halo suave detrás de cada imagen (blending aditivo)
+    glow: {
+      enabled: true,
+      radiusMultiplier: 1.6, // radio del halo = imgSize × radiusMultiplier
+      intensity: 0.55, // alpha máximo del halo (0–1)
+    },
+  },
+
   // ─── Export de video ──────────────────────────────────────────────────────
   export: {
     // 'ccapture'    → CCapture.js, frame-by-frame, calidad alta (recomendado)

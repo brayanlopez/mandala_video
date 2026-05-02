@@ -2,20 +2,34 @@
  * renderer-p5.js — Adaptador de renderizado usando p5.js
  *
  * ÚNICO ARCHIVO QUE CAMBIA AL MIGRAR DE MOTOR.
+ * main.js y animator.js no se modifican al cambiar renderer.
  *
- * Implementa la interfaz Renderer:
- *   init(containerId, w, h, onReady)  → configura el canvas
- *   loadImage(src)                    → Promise<p5.Image>
- *   clear(bgColor)                    → limpia el frame
+ * Interfaz pública (10 métodos):
+ *   init(containerId, w, h, onReady)          → configura el canvas
+ *   loadImage(src)                            → Promise<p5.Image>
+ *   clear(bgColor)                            → limpia el frame
  *   drawImage(img, x, y, size, alpha, rotDeg) → dibuja una imagen
- *   flush()                           → presenta el frame al canvas
- *   getCanvas()                       → HTMLCanvasElement nativo
- *   destroy()                         → limpia recursos
- *
- * Para migrar a PixiJS: crear renderer-pixi.js con la misma interfaz.
- * Para migrar a Three.js: crear renderer-three.js con la misma interfaz.
- * main.js y animator.js no se modifican.
+ *   flush()                                   → presenta el frame al canvas
+ *   getCanvas()                               → HTMLCanvasElement nativo
+ *   destroy()                                 → limpia recursos
+ *   drawGlow(x, y, size, alpha, colorHex)     → halo radial aditivo
+ *   drawParticle(x, y, size, alpha, colorHex) → círculo aditivo
+ *   pauseEffects() / tickEffects(dt) / resumeEffects() → no-ops en p5;
+ *     en renderers GPU pausarían/avanzarían efectos del lado del motor.
  */
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Convierte #RRGGBB a {r, g, b}. Retorna blanco si el formato es inválido. */
+function _hexToRgb(hex) {
+  const h = hex.replace(/^#/, "");
+  if (h.length !== 6) return { r: 255, g: 255, b: 255 };
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+  };
+}
 
 export class P5Renderer {
   constructor() {
@@ -142,6 +156,38 @@ export class P5Renderer {
     this._imageCache.clear();
   }
 
+  // ─── Efectos continuos ────────────────────────────────────────────────────
+
+  /** No-op: en p5 todo el estado de efectos vive en animator.js. */
+  pauseEffects() {}
+
+  /** @param {number} _dt - Duración del frame en ms (1000 / fps) */
+  tickEffects(_dt) {}
+
+  resumeEffects() {}
+
+  // ─── Primitivas de efectos visuales ───────────────────────────────────────
+
+  /**
+   * Encola un halo radial aditivo centrado en (x, y).
+   * @param {number} x @param {number} y @param {number} size
+   * @param {number} alpha @param {string} colorHex - #RRGGBB
+   */
+  drawGlow(x, y, size, alpha, colorHex) {
+    if (!this._ready || alpha <= 0) return;
+    this._drawQueue.push({ type: "glow", x, y, size, alpha, colorHex });
+  }
+
+  /**
+   * Encola una partícula circular con blending aditivo.
+   * @param {number} x @param {number} y @param {number} size
+   * @param {number} alpha @param {string} colorHex - #RRGGBB
+   */
+  drawParticle(x, y, size, alpha, colorHex) {
+    if (!this._ready || alpha <= 0) return;
+    this._drawQueue.push({ type: "particle", x, y, size, alpha, colorHex });
+  }
+
   /**
    * Destruye la instancia de p5 y libera el canvas.
    */
@@ -177,6 +223,30 @@ export class P5Renderer {
         p.image(cmd.img, 0, 0, cmd.size, cmd.size);
         p.noTint();
         p.pop();
+      } else if (cmd.type === "glow") {
+        const ctx = this._p.drawingContext;
+        const r = cmd.size / 2;
+        const rgb = _hexToRgb(cmd.colorHex);
+        const grad = ctx.createRadialGradient(cmd.x, cmd.y, 0, cmd.x, cmd.y, r);
+        grad.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${cmd.alpha})`);
+        grad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cmd.x, cmd.y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else if (cmd.type === "particle") {
+        const ctx = this._p.drawingContext;
+        const rgb = _hexToRgb(cmd.colorHex);
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${cmd.alpha})`;
+        ctx.beginPath();
+        ctx.arc(cmd.x, cmd.y, cmd.size / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
     }
 

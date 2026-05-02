@@ -56,6 +56,10 @@ const Easing = {
 };
 
 // ─── Constantes de efectos de entrada ─────────────────────────────────────
+//
+// Nombrar estos valores evita números mágicos dispersos en _drawFrame.
+
+const GOLDEN_ANGLE_RAD = 137.508 * (Math.PI / 180); // ~2.3999 rad — distribución de fase dorada
 const SPIN_IN_ROTATION_DEG = 270; // spinIn: parte desde 270° y llega a 0°
 const DROP_HEIGHT_FACTOR = 0.4; // drop: cae desde el 40% del alto del canvas
 const SLIDE_OUT_FACTOR = 2.5; // slideOut: inicia a 2.5× el radio desde el centro
@@ -105,6 +109,9 @@ export class Animator {
 
     /** Modo export: avanza tiempo artificialmente frame a frame */
     this._exportMode = false;
+
+    /** Partículas ambientales — array de objetos {x, y, vy, size, alpha, color} */
+    this._particles = this._initParticles();
   }
 
   // ─── API pública ──────────────────────────────────────────────────────────
@@ -151,6 +158,16 @@ export class Animator {
       s.extraRotDeg = 0;
       s.visible = false;
     });
+    this._particles = this._initParticles();
+  }
+
+  /**
+   * Reinicializa el array de partículas desde la configuración actual.
+   * Llamar cuando se cambia effects.particles.enabled o effects.particles.count
+   * desde la UI, ya que esos cambios afectan el tamaño del array.
+   */
+  reinitParticles() {
+    this._particles = this._initParticles();
   }
 
   /** Ajusta la velocidad sin detener la animación */
@@ -161,9 +178,12 @@ export class Animator {
   /**
    * Avanza la animación un frame (para export frame-by-frame).
    * No usa requestAnimationFrame.
+   * Llama a renderer.tickEffects() antes de avanzar el tiempo para que efectos
+   * GPU-side (si los hay en Three.js/PixiJS) sean deterministas.
    * @param {number} frameDeltaMs - Duración de un frame en ms (1000 / fps)
    */
   tickExport(frameDeltaMs) {
+    this._renderer.tickEffects(frameDeltaMs);
     this._advanceTime(frameDeltaMs * this._config.animation.speed);
     this._renderFrame();
   }
@@ -228,6 +248,30 @@ export class Animator {
 
     this._renderer.clear(bgColor);
 
+    // ─── Partículas ambientales (se dibujan bajo los slots) ─────────────────
+    if (
+      this._config.effects?.particles?.enabled &&
+      this._particles.length > 0
+    ) {
+      const wrapY = this._config.canvas.height;
+      for (const p of this._particles) {
+        p.y -= p.vy;
+        if (p.y < 0) p.y += wrapY; // envolver verticalmente
+        this._renderer.drawParticle(p.x, p.y, p.size, p.alpha, p.color);
+      }
+    }
+
+    // ─── Cámara: escala global + balanceo lateral ────────────────────────────
+    // Las dos funciones usan frecuencias distintas (×0.71) para evitar
+    // periodicidad simple y dar un movimiento orgánico tipo "cámara en mano".
+    let camScale = 1;
+    let camSwayX = 0;
+    if (this._config.effects?.cameraBreathing?.enabled) {
+      const { scaleAmp, swayAmp, speed } = this._config.effects.cameraBreathing;
+      camScale = 1 + Math.sin(this._elapsed * speed) * scaleAmp;
+      camSwayX = Math.sin(this._elapsed * speed * 0.71) * swayAmp;
+    }
+
     this._slots.forEach((slot, i) => {
       const startMs = slot.entranceOrder * staggerDelay;
       const rawT = (this._elapsed - startMs) / entryDuration;
@@ -238,7 +282,7 @@ export class Animator {
       const s = this._state[i];
       s.visible = true;
 
-      // ─── Aplicar efecto de entrada ───────────────────────────────────────
+      // ─── Aplicar efecto de entrada ─────────────────────────────────────────
       switch (entryEffect) {
         case "scaleIn":
           s.alpha = Easing.easeOutCubic(t);
@@ -297,12 +341,12 @@ export class Animator {
           break;
       }
 
-      // ─── Calcular tamaño y rotación final ─────────────────────────────────
+      // ─── Tamaño y rotación base ────────────────────────────────────────────
       const imgScale = this._config.canvas.imgScale ?? 1;
-      const finalSize = slot.imgSize * s.scale * imgScale;
+      let finalSize = slot.imgSize * s.scale * imgScale;
       const finalRotDeg = slot.angleDeg + this._globalRot + s.extraRotDeg;
 
-      // ─── Calcular posición (efectos que modifican X/Y) ────────────────────
+      // ─── Posición base ─────────────────────────────────────────────────────
       let finalX = slot.x;
       let finalY = slot.y;
 
@@ -326,6 +370,33 @@ export class Animator {
         }
       }
 
+      // ─── Flotación idle (post-entrada, distribución de fase dorada) ─────────
+      // Cada slot oscila con una fase desplazada por GOLDEN_ANGLE_RAD × i,
+      // lo que garantiza que ningún par de slots bote en sincronía.
+      if (t >= 1 && this._config.effects?.idleFloat?.enabled) {
+        const { amplitude, speed } = this._config.effects.idleFloat;
+        finalY +=
+          Math.sin(this._elapsed * speed + i * GOLDEN_ANGLE_RAD) * amplitude;
+      }
+
+      // ─── Cámara: aplicar escala global y balanceo ──────────────────────────
+      finalX = this._cx + (finalX - this._cx) * camScale + camSwayX;
+      finalY = this._cy + (finalY - this._cy) * camScale;
+      finalSize *= camScale;
+
+      // ─── Halo suave detrás de la imagen ──────────────────────────────────
+      if (this._config.effects?.glow?.enabled) {
+        const { radiusMultiplier, intensity } = this._config.effects.glow;
+        const glowSize = slot.imgSize * radiusMultiplier * camScale;
+        this._renderer.drawGlow(
+          finalX,
+          finalY,
+          glowSize,
+          s.alpha * intensity,
+          "#ffffff",
+        );
+      }
+
       this._renderer.drawImage(
         this._images[i],
         finalX,
@@ -337,5 +408,29 @@ export class Animator {
     });
 
     this._renderer.flush();
+  }
+
+  // ─── Efectos ──────────────────────────────────────────────────────────────
+
+  /**
+   * Inicializa el array de partículas ambientales desde config.effects.particles.
+   * Retorna [] si las partículas están deshabilitadas o no hay config de efectos.
+   * @returns {Array<{x:number, y:number, vy:number, size:number, alpha:number, color:string}>}
+   */
+  _initParticles() {
+    const cfg = this._config.effects?.particles;
+    if (!cfg?.enabled) return [];
+    const { count, palette, speed } = cfg;
+    const W = this._config.canvas.width;
+    const H = this._config.canvas.height;
+    // vy en px/frame normalizado a 60fps: speed (px/ms) × (1000ms/60frames)
+    return Array.from({ length: count }, (_, i) => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vy: (0.3 + Math.random() * 0.7) * speed * (1000 / 60),
+      size: 2 + Math.random() * 4,
+      alpha: 0.3 + Math.random() * 0.5,
+      color: palette[i % palette.length],
+    }));
   }
 }

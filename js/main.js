@@ -62,6 +62,20 @@ const UI = {
   transparentCheckbox: $("transparent-checkbox"),
   canvasArea: $("canvas-area"),
   ffmpegAlphaRow: $("ffmpeg-alpha-row"),
+  // ── Efectos visuales ────────────────────────────────────────────────────
+  btnToggleEffects: $("btn-toggle-effects"),
+  idleFloatCheckbox: $("idle-float-checkbox"),
+  idleFloatAmpSlider: $("idle-float-amp-slider"),
+  idleFloatAmpLabel: $("idle-float-amp-label"),
+  camBreathingCheckbox: $("cam-breathing-checkbox"),
+  camBreathingSwaySlider: $("cam-breathing-sway-slider"),
+  camBreathingSwayLabel: $("cam-breathing-sway-label"),
+  particlesCheckbox: $("particles-checkbox"),
+  particlesCountSlider: $("particles-count-slider"),
+  particlesCountLabel: $("particles-count-label"),
+  glowCheckbox: $("glow-checkbox"),
+  glowIntensitySlider: $("glow-intensity-slider"),
+  glowIntensityLabel: $("glow-intensity-label"),
   // ── Presets (F-06) ──────────────────────────────────────────────────────
   presetNameInput: $("preset-name-input"),
   presetSelect: $("preset-select"),
@@ -145,6 +159,7 @@ async function onRendererReady() {
     AppState.renderer.getCanvas(),
     CONFIG,
     AppState.animator,
+    AppState.renderer,
   );
 
   // 5. Conectar controles UI
@@ -214,6 +229,7 @@ async function switchPattern(patternName) {
     AppState.renderer.getCanvas(),
     CONFIG,
     AppState.animator,
+    AppState.renderer,
   );
 
   startPreview();
@@ -633,6 +649,119 @@ function bindPresetControls() {
   });
 }
 
+// ── Efectos visuales ──────────────────────────────────────────────────────
+
+/** Sincroniza el label del botón maestro con el estado actual de los efectos. */
+function _syncToggleEffectsBtn() {
+  const allOn =
+    CONFIG.effects.idleFloat.enabled &&
+    CONFIG.effects.cameraBreathing.enabled &&
+    CONFIG.effects.particles.enabled &&
+    CONFIG.effects.glow.enabled;
+  UI.btnToggleEffects.textContent = allOn
+    ? "Desactivar todos"
+    : "Activar todos";
+}
+
+function bindEffectsControls() {
+  // Botón maestro — activa o desactiva los cuatro efectos a la vez
+  UI.btnToggleEffects.addEventListener("click", () => {
+    const allOn =
+      CONFIG.effects.idleFloat.enabled &&
+      CONFIG.effects.cameraBreathing.enabled &&
+      CONFIG.effects.particles.enabled &&
+      CONFIG.effects.glow.enabled;
+    const next = !allOn;
+
+    CONFIG.effects.idleFloat.enabled = next;
+    CONFIG.effects.cameraBreathing.enabled = next;
+    CONFIG.effects.particles.enabled = next;
+    CONFIG.effects.glow.enabled = next;
+
+    UI.idleFloatCheckbox.checked = next;
+    UI.camBreathingCheckbox.checked = next;
+    UI.particlesCheckbox.checked = next;
+    UI.glowCheckbox.checked = next;
+
+    AppState.animator.reinitParticles();
+    _syncToggleEffectsBtn();
+  });
+
+  // Flotación idle — toggle
+  UI.idleFloatCheckbox.addEventListener("change", () => {
+    CONFIG.effects.idleFloat.enabled = UI.idleFloatCheckbox.checked;
+    _syncToggleEffectsBtn();
+  });
+
+  // Flotación idle — amplitud (efecto inmediato)
+  bindSlider(
+    UI.idleFloatAmpSlider,
+    UI.idleFloatAmpLabel,
+    0,
+    30,
+    0,
+    "px",
+    (v) => {
+      CONFIG.effects.idleFloat.amplitude = v;
+    },
+  );
+
+  // Respiración de cámara — toggle
+  UI.camBreathingCheckbox.addEventListener("change", () => {
+    CONFIG.effects.cameraBreathing.enabled = UI.camBreathingCheckbox.checked;
+    _syncToggleEffectsBtn();
+  });
+
+  // Respiración de cámara — amplitud de balanceo (efecto inmediato)
+  bindSlider(
+    UI.camBreathingSwaySlider,
+    UI.camBreathingSwayLabel,
+    0,
+    50,
+    0,
+    "px",
+    (v) => {
+      CONFIG.effects.cameraBreathing.swayAmp = v;
+    },
+  );
+
+  // Partículas — toggle (requiere reiniciar el array)
+  UI.particlesCheckbox.addEventListener("change", () => {
+    CONFIG.effects.particles.enabled = UI.particlesCheckbox.checked;
+    AppState.animator.reinitParticles();
+    _syncToggleEffectsBtn();
+  });
+
+  // Partículas — cantidad (requiere reiniciar el array para redimensionarlo)
+  UI.particlesCountSlider.addEventListener("input", () => {
+    const v = Math.round(
+      clamp(parseFloat(UI.particlesCountSlider.value), 0, 500),
+    );
+    CONFIG.effects.particles.count = v;
+    UI.particlesCountLabel.textContent = String(v);
+    AppState.animator.reinitParticles();
+  });
+
+  // Halo (glow) — toggle
+  UI.glowCheckbox.addEventListener("change", () => {
+    CONFIG.effects.glow.enabled = UI.glowCheckbox.checked;
+    _syncToggleEffectsBtn();
+  });
+
+  // Halo (glow) — intensidad (efecto inmediato)
+  bindSlider(
+    UI.glowIntensitySlider,
+    UI.glowIntensityLabel,
+    0,
+    1,
+    2,
+    "",
+    (v) => {
+      CONFIG.effects.glow.intensity = v;
+    },
+  );
+}
+
 // ── Orquestador ───────────────────────────────────────────────────────────
 
 function bindControls() {
@@ -652,6 +781,7 @@ function bindControls() {
   bindFpsSelect();
   bindCaptureSelect();
   bindTransparentCheckbox();
+  bindEffectsControls();
   bindPresetControls();
 }
 
@@ -693,6 +823,22 @@ function syncUIFromConfig() {
   );
   UI.ffmpegAlphaRow.style.display =
     (CONFIG.export.transparentBg ?? false) ? "" : "none";
+  // Efectos
+  UI.idleFloatCheckbox.checked = CONFIG.effects.idleFloat.enabled;
+  UI.idleFloatAmpSlider.value = String(CONFIG.effects.idleFloat.amplitude);
+  UI.idleFloatAmpLabel.textContent = `${CONFIG.effects.idleFloat.amplitude}px`;
+  UI.camBreathingCheckbox.checked = CONFIG.effects.cameraBreathing.enabled;
+  UI.camBreathingSwaySlider.value = String(
+    CONFIG.effects.cameraBreathing.swayAmp,
+  );
+  UI.camBreathingSwayLabel.textContent = `${CONFIG.effects.cameraBreathing.swayAmp}px`;
+  UI.particlesCheckbox.checked = CONFIG.effects.particles.enabled;
+  UI.particlesCountSlider.value = String(CONFIG.effects.particles.count);
+  UI.particlesCountLabel.textContent = String(CONFIG.effects.particles.count);
+  UI.glowCheckbox.checked = CONFIG.effects.glow.enabled;
+  UI.glowIntensitySlider.value = String(CONFIG.effects.glow.intensity);
+  UI.glowIntensityLabel.textContent = CONFIG.effects.glow.intensity.toFixed(2);
+  _syncToggleEffectsBtn();
 }
 
 /** Reconstruye el <select> de presets desde localStorage. */

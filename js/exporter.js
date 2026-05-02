@@ -23,11 +23,15 @@ export class Exporter {
    * @param {HTMLCanvasElement}                  canvas
    * @param {import('../config.js').CONFIG}      config
    * @param {import('./animator.js').Animator}   animator
+   * @param {object|null}                        renderer  - Instancia del renderer activo.
+   *   Opcional — si se provee, se llaman pauseEffects()/resumeEffects() al iniciar/detener
+   *   el export CCapture para mantener efectos GPU-side deterministas.
    */
-  constructor(canvas, config, animator) {
+  constructor(canvas, config, animator, renderer = null) {
     this._canvas = canvas;
     this._config = config;
     this._animator = animator;
+    this._renderer = renderer;
 
     this._capturer = null; // instancia de CCapture
     this._recorder = null; // instancia de MediaRecorder
@@ -100,6 +104,9 @@ export class Exporter {
   // ─── CCapture ─────────────────────────────────────────────────────────────
 
   _startCCapture() {
+    // Congelar efectos GPU-side durante el export frame-by-frame
+    if (this._renderer) this._renderer.pauseEffects();
+
     // CCapture se carga como script global desde el HTML
     // eslint-disable-next-line no-undef
     if (typeof CCapture === "undefined") {
@@ -142,6 +149,8 @@ export class Exporter {
         this._downloadBlob(blob, filename);
         if (this._onDone) this._onDone(blob);
         if (this._onProgress) this._onProgress(1);
+        // Reanudar efectos GPU-side tras finalizar el export
+        if (this._renderer) this._renderer.resumeEffects();
         resolve();
       });
     });

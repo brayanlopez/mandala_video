@@ -57,6 +57,7 @@ const UI = {
   durationSlider: $("duration-slider"),
   durationLabel: $("duration-label"),
   loopCheckbox: $("loop-checkbox"),
+  btnResetAnimation: $("btn-reset-animation"),
   fpsSelect: $("fps-select"),
   captureSelect: $("capture-select"),
   transparentCheckbox: $("transparent-checkbox"),
@@ -537,6 +538,42 @@ function bindDurationSlider() {
   });
 }
 
+function bindResetAnimationBtn() {
+  UI.btnResetAnimation.addEventListener("click", () => {
+    // Defaults from config.js
+    CONFIG.animation.speed = 1.0;
+    CONFIG.animation.rotationSpeed = 0.04;
+    CONFIG.animation.staggerDelay = 160;
+    CONFIG.animation.entryDuration = 700;
+    CONFIG.canvas.imgScale = 1.0;
+    CONFIG.canvas.bgColor = "#1a0a2e";
+    CONFIG.animation.loopAnimation = false;
+
+    // Reset sliders + labels
+    UI.speedSlider.value = 1.0;
+    UI.speedLabel.textContent = "1.0×";
+
+    UI.rotationSlider.value = 0.04;
+    UI.rotationLabel.textContent = "0.04";
+
+    UI.staggerSlider.value = 160;
+    UI.staggerLabel.textContent = "160ms";
+
+    UI.durationSlider.value = 700;
+    UI.durationLabel.textContent = "700ms";
+
+    UI.imgScaleSlider.value = 1.0;
+    UI.imgScaleLabel.textContent = "1.0×";
+
+    UI.bgColorInput.value = "#1a0a2e";
+
+    UI.loopCheckbox.checked = false;
+
+    // Apply speed immediately
+    AppState.animator.setSpeed(1.0);
+  });
+}
+
 // ── Selects y checkboxes ──────────────────────────────────────────────────
 
 function bindEffectSelect() {
@@ -807,6 +844,7 @@ function bindControls() {
   bindRotationSlider();
   bindStaggerSlider();
   bindDurationSlider();
+  bindResetAnimationBtn();
   bindEffectSelect();
   bindPatternSelect();
   bindBgColorInput();

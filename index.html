@@ -144,7 +144,16 @@
         <div class="settings-inner">
           <!-- Sección: Animación ──────────────────────────────────────────── -->
           <div class="settings-section">
-            <p class="settings-heading">Animación</p>
+            <div class="settings-heading-row">
+              <p class="settings-heading">Animación</p>
+              <button
+                class="btn btn-sm"
+                id="btn-reset-animation"
+                title="Restablecer todos los valores de animación a sus valores predeterminados"
+              >
+                Restaurar valores
+              </button>
+            </div>
 
             <div class="settings-row">
               <label for="speed-slider">Velocidad</label>
@@ -225,72 +234,6 @@
               <label for="loop-checkbox">Repetir (loop)</label>
               <input type="checkbox" id="loop-checkbox" />
             </div>
-          </div>
-
-          <!-- Sección: Presets ──────────────────────────────────────────────── -->
-          <div class="settings-section">
-            <p class="settings-heading">Presets</p>
-
-            <div class="settings-row">
-              <label for="preset-name-input">Nombre</label>
-              <input
-                type="text"
-                id="preset-name-input"
-                class="text-input"
-                placeholder="Mi preset…"
-                maxlength="60"
-              />
-            </div>
-
-            <div class="settings-row">
-              <button
-                class="btn btn-sm"
-                id="btn-save-preset"
-                aria-label="Guardar preset"
-              >
-                💾 Guardar
-              </button>
-              <button
-                class="btn btn-sm"
-                id="btn-export-preset"
-                aria-label="Exportar preset como JSON"
-              >
-                ⬇ JSON
-              </button>
-              <!-- Importar JSON: label actúa de botón para el input oculto -->
-              <label class="btn btn-sm" for="import-preset-file"
-                >⬆ Importar</label
-              >
-              <input
-                type="file"
-                id="import-preset-file"
-                accept=".json"
-                style="display: none"
-              />
-            </div>
-
-            <div class="settings-row">
-              <label for="preset-select">Guardados</label>
-              <select id="preset-select">
-                <option value="">— seleccionar —</option>
-              </select>
-              <button
-                class="btn btn-sm"
-                id="btn-load-preset"
-                aria-label="Cargar preset seleccionado"
-              >
-                Cargar
-              </button>
-              <button
-                class="btn btn-sm"
-                id="btn-delete-preset"
-                aria-label="Borrar preset seleccionado"
-              >
-                Borrar
-              </button>
-            </div>
-
-            <p id="preset-status" class="preset-status"></p>
           </div>
 
           <!-- Sección: Efectos ──────────────────────────────────────────── -->
@@ -385,6 +328,72 @@
               />
               <span class="val-label" id="glow-intensity-label">0.55</span>
             </div>
+          </div>
+
+          <!-- Sección: Presets ──────────────────────────────────────────────── -->
+          <div class="settings-section">
+            <p class="settings-heading">Presets</p>
+
+            <div class="settings-row">
+              <label for="preset-name-input">Nombre</label>
+              <input
+                type="text"
+                id="preset-name-input"
+                class="text-input"
+                placeholder="Mi preset…"
+                maxlength="60"
+              />
+            </div>
+
+            <div class="settings-row">
+              <button
+                class="btn btn-sm"
+                id="btn-save-preset"
+                aria-label="Guardar preset"
+              >
+                💾 Guardar
+              </button>
+              <button
+                class="btn btn-sm"
+                id="btn-export-preset"
+                aria-label="Exportar preset como JSON"
+              >
+                ⬇ JSON
+              </button>
+              <!-- Importar JSON: label actúa de botón para el input oculto -->
+              <label class="btn btn-sm" for="import-preset-file"
+                >⬆ Importar</label
+              >
+              <input
+                type="file"
+                id="import-preset-file"
+                accept=".json"
+                style="display: none"
+              />
+            </div>
+
+            <div class="settings-row">
+              <label for="preset-select">Guardados</label>
+              <select id="preset-select">
+                <option value="">— seleccionar —</option>
+              </select>
+              <button
+                class="btn btn-sm"
+                id="btn-load-preset"
+                aria-label="Cargar preset seleccionado"
+              >
+                Cargar
+              </button>
+              <button
+                class="btn btn-sm"
+                id="btn-delete-preset"
+                aria-label="Borrar preset seleccionado"
+              >
+                Borrar
+              </button>
+            </div>
+
+            <p id="preset-status" class="preset-status"></p>
           </div>
 
           <!-- Sección: Exportación ───────────────────────────────────────── -->

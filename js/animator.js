@@ -55,6 +55,13 @@ const Easing = {
   linear: (t) => t,
 };
 
+// ─── Constantes de efectos de entrada ─────────────────────────────────────
+const SPIN_IN_ROTATION_DEG = 270; // spinIn: parte desde 270° y llega a 0°
+const DROP_HEIGHT_FACTOR = 0.4; // drop: cae desde el 40% del alto del canvas
+const SLIDE_OUT_FACTOR = 2.5; // slideOut: inicia a 2.5× el radio desde el centro
+const SHRINK_INITIAL_SCALE = 3.0; // shrink: aparece a 3× su tamaño y se contrae a 1×
+const SPIRAL_ROTATIONS_DEG = 720; // spiral: dos vueltas completas (2 × 360°)
+
 // ─── Clase principal ───────────────────────────────────────────────────────
 
 export class Animator {
@@ -242,7 +249,7 @@ export class Animator {
         case "spinIn":
           s.alpha = Easing.easeOutCubic(t);
           s.scale = Easing.easeOutCubic(t);
-          s.extraRotDeg = (1 - t) * 270; // gira desde 270° hasta 0
+          s.extraRotDeg = (1 - t) * SPIN_IN_ROTATION_DEG;
           break;
 
         case "flyIn": {
@@ -268,17 +275,18 @@ export class Animator {
           break;
 
         case "shrink":
-          // Aparece a 3× tamaño y se contrae a su tamaño final
+          // Aparece a SHRINK_INITIAL_SCALE× y se contrae a su tamaño final
           s.alpha = Easing.easeOutCubic(t);
-          s.scale = 1 + 2 * (1 - Easing.easeOutCubic(t)); // 3.0 → 1.0
+          s.scale =
+            1 + (SHRINK_INITIAL_SCALE - 1) * (1 - Easing.easeOutCubic(t));
           s.extraRotDeg = 0;
           break;
 
         case "spiral":
-          // Dos vueltas completas mientras se escala hacia el tamaño final
+          // SPIRAL_ROTATIONS_DEG mientras se escala hacia el tamaño final
           s.alpha = Easing.easeOutCubic(t);
           s.scale = Easing.easeOutCubic(t);
-          s.extraRotDeg = 720 * (1 - t); // 720° → 0°
+          s.extraRotDeg = SPIRAL_ROTATIONS_DEG * (1 - t);
           break;
 
         case "fadeIn":
@@ -307,10 +315,12 @@ export class Animator {
           // Cae desde una altura proporcional al canvas con rebote
           finalY =
             slot.y -
-            this._config.canvas.height * 0.4 * (1 - Easing.easeOutBounce(t));
+            this._config.canvas.height *
+              DROP_HEIGHT_FACTOR *
+              (1 - Easing.easeOutBounce(t));
         } else if (entryEffect === "slideOut") {
           // Entra desde fuera del canvas en la dirección radial del slot
-          const factor = 2.5 * (1 - Easing.easeOutCubic(t));
+          const factor = SLIDE_OUT_FACTOR * (1 - Easing.easeOutCubic(t));
           finalX = slot.x + (slot.x - this._cx) * factor;
           finalY = slot.y + (slot.y - this._cy) * factor;
         }

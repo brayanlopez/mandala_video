@@ -125,7 +125,12 @@ async function onRendererReady() {
   images = await loadAllImages();
 
   const loaded = images.filter(Boolean).length;
-  setStatus(`${loaded}/${slots.length} imágenes. Listo.`);
+  const missing = slots.length - loaded;
+  setStatus(
+    missing > 0
+      ? `${loaded}/${slots.length} imágenes. ⚠ ${missing} no encontradas.`
+      : `${loaded}/${slots.length} imágenes. Listo.`,
+  );
 
   // 4. Instanciar animator y exporter
   animator = new Animator(renderer, slots, images, CONFIG);
@@ -176,8 +181,12 @@ async function switchPattern(patternName) {
   images = await loadAllImages();
 
   const loaded = images.filter(Boolean).length;
+  const missing = slots.length - loaded;
+  const patternLabel = PATTERN_REGISTRY[patternName]?.label ?? patternName;
   setStatus(
-    `${PATTERN_REGISTRY[patternName]?.label ?? patternName} — ${loaded}/${slots.length} imágenes.`,
+    missing > 0
+      ? `${patternLabel} — ${loaded}/${slots.length} imágenes. ⚠ ${missing} no encontradas.`
+      : `${patternLabel} — ${loaded}/${slots.length} imágenes.`,
   );
 
   // Reinstanciar animator y exporter con los nuevos slots
@@ -283,8 +292,66 @@ async function runCCaptureLoop() {
 
 // ─── Controles UI ─────────────────────────────────────────────────────────
 
-function bindControls() {
-  // Play / Pause
+// ── Validación de entradas ────────────────────────────────────────────────
+//
+// Valores aceptados para campos de selección. Se valida antes de mutar CONFIG
+// para evitar valores inesperados provenientes de manipulación del DOM.
+
+const VALID_EFFECTS = new Set(["fadeIn", "scaleIn", "spinIn", "flyIn"]);
+const VALID_FPS = new Set([30, 60]);
+const VALID_CAPTURE_MODES = new Set(["ccapture", "mediarecorder"]);
+const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
+
+/** Restringe `val` al rango [min, max]. */
+function clamp(val, min, max) {
+  return Math.min(max, Math.max(min, val));
+}
+
+/**
+ * Registra un listener "input" en un slider: lee, clampea, invoca el setter
+ * y actualiza el label. Para sliders con efecto inmediato (sin reinicio de animación).
+ *
+ * @param {HTMLInputElement}      el       — slider
+ * @param {HTMLElement}           label    — elemento que muestra el valor
+ * @param {number}                min
+ * @param {number}                max
+ * @param {number}                decimals — cifras para toFixed()
+ * @param {string}                suffix   — sufijo del label ("×", "ms", "")
+ * @param {(val: number) => void} setter   — callback con el valor validado
+ */
+function bindSlider(el, label, min, max, decimals, suffix, setter) {
+  el.addEventListener("input", () => {
+    const val = clamp(parseFloat(el.value), min, max);
+    setter(val);
+    label.textContent = val.toFixed(decimals) + suffix; // textContent — nunca innerHTML (CWE-79)
+  });
+}
+
+/**
+ * Igual que bindSlider pero con evento "change" y reinicio de animación.
+ * Para parámetros que modifican la secuencia de entrada (stagger, duración).
+ *
+ * @param {HTMLInputElement}      el      — slider
+ * @param {HTMLElement}           label
+ * @param {number}                min
+ * @param {number}                max
+ * @param {string}                suffix
+ * @param {(val: number) => void} setter
+ */
+function bindRestartingSlider(el, label, min, max, suffix, setter) {
+  el.addEventListener("change", () => {
+    if (isExporting) return;
+    const val = clamp(parseInt(el.value, 10), min, max);
+    setter(val);
+    label.textContent = `${val}${suffix}`;
+    animator.reset();
+    startPreview();
+  });
+}
+
+// ── Controles de reproducción ─────────────────────────────────────────────
+
+function bindPlayControls() {
   UI.btnPlay.addEventListener("click", () => {
     if (isExporting) return;
     if (animator.isCompleted) {
@@ -300,8 +367,9 @@ function bindControls() {
       UI.btnPlay.textContent = "⏸ Pausar";
     }
   });
+}
 
-  // Reset
+function bindResetControl() {
   UI.btnReset.addEventListener("click", () => {
     if (isExporting) return;
     animator.reset();
@@ -310,101 +378,133 @@ function bindControls() {
     UI.progressBar.style.width = "0%";
     setStatus("Animación reseteada.");
   });
+}
 
-  // Export
+function bindExportControl() {
   UI.btnExport.addEventListener("click", () => {
     if (!isExporting) runExport();
   });
+}
 
-  // Speed slider
-  UI.speedSlider.addEventListener("input", () => {
-    const val = parseFloat(UI.speedSlider.value);
-    animator.setSpeed(val);
-    UI.speedLabel.textContent = `${val.toFixed(1)}×`; // textContent — nunca innerHTML (CWE-79)
-  });
+// ── Panel de ajustes ──────────────────────────────────────────────────────
 
-  // Efecto de entrada
-  UI.effectSelect.addEventListener("change", () => {
-    if (isExporting) return;
-    CONFIG.animation.entryEffect = UI.effectSelect.value;
-    animator.reset();
-    startPreview();
-  });
-
-  // ── Selector de patrón de mandala ────────────────────────────────────────
-  UI.patternSelect.addEventListener("change", () => {
-    if (isExporting) return;
-    // Allowlist derivada del PATTERN_REGISTRY — fuente única de verdad
-    const selected = UI.patternSelect.value;
-    if (!Object.hasOwn(PATTERN_REGISTRY, selected)) return; // ignorar valores no esperados
-    switchPattern(selected);
-  });
-
-  // ── Toggle del panel de ajustes ──────────────────────────────────────────
+function bindSettingsToggle() {
   UI.btnSettings.addEventListener("click", () => {
     const isOpen = UI.settingsPanel.classList.toggle("open");
     UI.btnSettings.classList.toggle("active", isOpen);
     UI.settingsPanel.setAttribute("aria-hidden", String(!isOpen));
   });
+}
 
-  // ── Escala global de imágenes (efecto inmediato — leída por Animator en cada frame) ──
-  UI.imgScaleSlider.addEventListener("input", () => {
-    const val = parseFloat(UI.imgScaleSlider.value);
-    CONFIG.canvas.imgScale = val;
-    UI.imgScaleLabel.textContent = `${val.toFixed(2)}×`;
+// ── Sliders de animación ──────────────────────────────────────────────────
+
+function bindSpeedSlider() {
+  // Efecto inmediato — no requiere reinicio de animación
+  bindSlider(UI.speedSlider, UI.speedLabel, 0.1, 4.0, 1, "×", (v) =>
+    animator.setSpeed(v),
+  );
+}
+
+function bindImgScaleSlider() {
+  // Efecto inmediato — leída por Animator en cada frame
+  bindSlider(UI.imgScaleSlider, UI.imgScaleLabel, 0.3, 2.0, 2, "×", (v) => {
+    CONFIG.canvas.imgScale = v;
   });
+}
 
-  // ── Color de fondo (efecto inmediato — el renderer lo lee en cada frame) ──
+function bindRotationSlider() {
+  // Efecto inmediato
+  bindSlider(UI.rotationSlider, UI.rotationLabel, 0, 2.0, 3, "", (v) => {
+    CONFIG.animation.rotationSpeed = v;
+  });
+}
+
+function bindStaggerSlider() {
+  // Requiere reinicio para consistencia visual
+  bindRestartingSlider(
+    UI.staggerSlider,
+    UI.staggerLabel,
+    0,
+    2000,
+    "ms",
+    (v) => {
+      CONFIG.animation.staggerDelay = v;
+    },
+  );
+}
+
+function bindDurationSlider() {
+  // Requiere reinicio para consistencia visual
+  bindRestartingSlider(
+    UI.durationSlider,
+    UI.durationLabel,
+    100,
+    3000,
+    "ms",
+    (v) => {
+      CONFIG.animation.entryDuration = v;
+    },
+  );
+}
+
+// ── Selects y checkboxes ──────────────────────────────────────────────────
+
+function bindEffectSelect() {
+  UI.effectSelect.addEventListener("change", () => {
+    if (isExporting) return;
+    const val = UI.effectSelect.value;
+    if (!VALID_EFFECTS.has(val)) return;
+    CONFIG.animation.entryEffect = val;
+    animator.reset();
+    startPreview();
+  });
+}
+
+function bindPatternSelect() {
+  // Allowlist derivada del PATTERN_REGISTRY — fuente única de verdad
+  UI.patternSelect.addEventListener("change", () => {
+    if (isExporting) return;
+    const selected = UI.patternSelect.value;
+    if (!Object.hasOwn(PATTERN_REGISTRY, selected)) return;
+    switchPattern(selected);
+  });
+}
+
+function bindBgColorInput() {
+  // Efecto inmediato — el renderer lo lee en cada frame
   UI.bgColorInput.addEventListener("input", () => {
-    CONFIG.canvas.bgColor = UI.bgColorInput.value; // textContent no aplica, input.value es seguro aquí
+    const val = UI.bgColorInput.value;
+    if (!HEX_COLOR_RE.test(val)) return;
+    CONFIG.canvas.bgColor = val;
   });
+}
 
-  // ── Velocidad de rotación (efecto inmediato) ──────────────────────────────
-  UI.rotationSlider.addEventListener("input", () => {
-    const val = parseFloat(UI.rotationSlider.value);
-    CONFIG.animation.rotationSpeed = val;
-    UI.rotationLabel.textContent = val.toFixed(3);
-  });
-
-  // ── Stagger delay (requiere reinicio para consistencia visual) ────────────
-  UI.staggerSlider.addEventListener("change", () => {
-    if (isExporting) return;
-    const val = parseInt(UI.staggerSlider.value, 10);
-    CONFIG.animation.staggerDelay = val;
-    UI.staggerLabel.textContent = `${val}ms`;
-    animator.reset();
-    startPreview();
-  });
-
-  // ── Duración de entrada (requiere reinicio para consistencia visual) ──────
-  UI.durationSlider.addEventListener("change", () => {
-    if (isExporting) return;
-    const val = parseInt(UI.durationSlider.value, 10);
-    CONFIG.animation.entryDuration = val;
-    UI.durationLabel.textContent = `${val}ms`;
-    animator.reset();
-    startPreview();
-  });
-
-  // ── Loop (efecto inmediato — lo lee _tick en cada frame) ──────────────────
+function bindLoopCheckbox() {
+  // Efecto inmediato — lo lee _tick en cada frame
   UI.loopCheckbox.addEventListener("change", () => {
     CONFIG.animation.loopAnimation = UI.loopCheckbox.checked;
   });
+}
 
-  // ── FPS de exportación (solo aplica al exportar) ──────────────────────────
+function bindFpsSelect() {
+  // Solo aplica al exportar
   UI.fpsSelect.addEventListener("change", () => {
-    CONFIG.canvas.fps = parseInt(UI.fpsSelect.value, 10);
+    const val = parseInt(UI.fpsSelect.value, 10);
+    if (!VALID_FPS.has(val)) return;
+    CONFIG.canvas.fps = val;
   });
+}
 
-  // ── Modo de captura (solo aplica al exportar) ─────────────────────────────
+function bindCaptureSelect() {
+  // Solo aplica al exportar
   UI.captureSelect.addEventListener("change", () => {
-    const allowed = ["ccapture", "mediarecorder"];
-    const selected = UI.captureSelect.value;
-    if (!allowed.includes(selected)) return;
-    CONFIG.export.captureMode = selected;
+    const val = UI.captureSelect.value;
+    if (!VALID_CAPTURE_MODES.has(val)) return;
+    CONFIG.export.captureMode = val;
   });
+}
 
-  // ── Fondo transparente ────────────────────────────────────────────────────
+function bindTransparentCheckbox() {
   UI.transparentCheckbox.addEventListener("change", () => {
     CONFIG.export.transparentBg = UI.transparentCheckbox.checked;
     UI.bgColorInput.disabled = UI.transparentCheckbox.checked;
@@ -416,9 +516,11 @@ function bindControls() {
       ? ""
       : "none";
   });
+}
 
-  // ── Presets (F-06) ───────────────────────────────────────────────────────
+// ── Presets (F-06) ────────────────────────────────────────────────────────
 
+function bindPresetControls() {
   // Guardar en localStorage
   UI.btnSavePreset.addEventListener("click", () => {
     const name = UI.presetNameInput.value.trim();
@@ -497,6 +599,28 @@ function bindControls() {
       UI.importPresetFile.value = ""; // permite reimportar el mismo archivo
     }
   });
+}
+
+// ── Orquestador ───────────────────────────────────────────────────────────
+
+function bindControls() {
+  bindPlayControls();
+  bindResetControl();
+  bindExportControl();
+  bindSettingsToggle();
+  bindSpeedSlider();
+  bindImgScaleSlider();
+  bindRotationSlider();
+  bindStaggerSlider();
+  bindDurationSlider();
+  bindEffectSelect();
+  bindPatternSelect();
+  bindBgColorInput();
+  bindLoopCheckbox();
+  bindFpsSelect();
+  bindCaptureSelect();
+  bindTransparentCheckbox();
+  bindPresetControls();
 }
 
 // ─── Helpers de presets (F-06) ────────────────────────────────────────────

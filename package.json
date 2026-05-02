@@ -12,8 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "prettify": "prettier -c .",
-    "prettify:fix": "prettier -c ."
+    "lint": "eslint js/ config.js",
+    "format:check": "prettier --check \"js/**/*.js\" config.js styles.css",
+    "format:write": "prettier --write \"js/**/*.js\" config.js styles.css"
   },
   "engines": {
     "node": ">=16"

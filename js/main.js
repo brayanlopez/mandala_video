@@ -75,14 +75,16 @@ const UI = {
 
 // ─── Estado de la app ─────────────────────────────────────────────────────
 
-let renderer = null;
-let animator = null;
-let exporter = null;
-let slots = [];
-let images = [];
-let isPlaying = false;
-let isExporting = false;
-let currentPattern = "circular";
+const AppState = {
+  renderer: null,
+  animator: null,
+  exporter: null,
+  slots: [],
+  images: [],
+  isPlaying: false,
+  isExporting: false,
+  currentPattern: "circular",
+};
 
 // ─── Inicialización ───────────────────────────────────────────────────────
 
@@ -99,18 +101,18 @@ async function init() {
     const option = document.createElement("option");
     option.value = key;
     option.textContent = label; // textContent — nunca innerHTML (CWE-79)
-    if (key === currentPattern) option.selected = true;
+    if (key === AppState.currentPattern) option.selected = true;
     categoryGroups[category].appendChild(option);
   });
 
   setStatus("Calculando layout…");
 
   // 1. Calcular posiciones con el patrón inicial
-  slots = computeLayout(currentPattern, CONFIG);
+  AppState.slots = computeLayout(AppState.currentPattern, CONFIG);
 
   // 2. Instanciar renderer (solo una vez — reutilizado al cambiar patrón)
-  renderer = new P5Renderer();
-  renderer.init(
+  AppState.renderer = new P5Renderer();
+  AppState.renderer.init(
     "canvas-container",
     CONFIG.canvas.width,
     CONFIG.canvas.height,
@@ -122,19 +124,28 @@ async function onRendererReady() {
   setStatus("Cargando imágenes…");
 
   // 3. Cargar todas las imágenes en paralelo
-  images = await loadAllImages();
+  AppState.images = await loadAllImages();
 
-  const loaded = images.filter(Boolean).length;
-  const missing = slots.length - loaded;
+  const loaded = AppState.images.filter(Boolean).length;
+  const missing = AppState.slots.length - loaded;
   setStatus(
     missing > 0
-      ? `${loaded}/${slots.length} imágenes. ⚠ ${missing} no encontradas.`
-      : `${loaded}/${slots.length} imágenes. Listo.`,
+      ? `${loaded}/${AppState.slots.length} imágenes. ⚠ ${missing} no encontradas.`
+      : `${loaded}/${AppState.slots.length} imágenes. Listo.`,
   );
 
   // 4. Instanciar animator y exporter
-  animator = new Animator(renderer, slots, images, CONFIG);
-  exporter = new Exporter(renderer.getCanvas(), CONFIG, animator);
+  AppState.animator = new Animator(
+    AppState.renderer,
+    AppState.slots,
+    AppState.images,
+    CONFIG,
+  );
+  AppState.exporter = new Exporter(
+    AppState.renderer.getCanvas(),
+    CONFIG,
+    AppState.animator,
+  );
 
   // 5. Conectar controles UI
   bindControls();
@@ -158,40 +169,49 @@ async function onRendererReady() {
  * @param {string} patternName
  */
 async function switchPattern(patternName) {
-  if (isExporting) return;
-  if (patternName === currentPattern) return;
+  if (AppState.isExporting) return;
+  if (patternName === AppState.currentPattern) return;
 
-  currentPattern = patternName;
+  AppState.currentPattern = patternName;
 
   // Detener animación actual
-  if (animator) {
-    animator.pause();
-    animator.reset();
+  if (AppState.animator) {
+    AppState.animator.pause();
+    AppState.animator.reset();
   }
-  isPlaying = false;
+  AppState.isPlaying = false;
   UI.btnPlay.textContent = "▶ Reproducir";
   UI.progressBar.style.width = "0%";
 
   setStatus("Cambiando patrón…");
 
   // Recalcular layout para el nuevo patrón
-  slots = computeLayout(patternName, CONFIG);
+  AppState.slots = computeLayout(patternName, CONFIG);
 
   // Recargar imágenes (el nuevo patrón puede tener diferente distribución)
-  images = await loadAllImages();
+  AppState.images = await loadAllImages();
 
-  const loaded = images.filter(Boolean).length;
-  const missing = slots.length - loaded;
+  const loaded = AppState.images.filter(Boolean).length;
+  const missing = AppState.slots.length - loaded;
   const patternLabel = PATTERN_REGISTRY[patternName]?.label ?? patternName;
   setStatus(
     missing > 0
-      ? `${patternLabel} — ${loaded}/${slots.length} imágenes. ⚠ ${missing} no encontradas.`
-      : `${patternLabel} — ${loaded}/${slots.length} imágenes.`,
+      ? `${patternLabel} — ${loaded}/${AppState.slots.length} imágenes. ⚠ ${missing} no encontradas.`
+      : `${patternLabel} — ${loaded}/${AppState.slots.length} imágenes.`,
   );
 
   // Reinstanciar animator y exporter con los nuevos slots
-  animator = new Animator(renderer, slots, images, CONFIG);
-  exporter = new Exporter(renderer.getCanvas(), CONFIG, animator);
+  AppState.animator = new Animator(
+    AppState.renderer,
+    AppState.slots,
+    AppState.images,
+    CONFIG,
+  );
+  AppState.exporter = new Exporter(
+    AppState.renderer.getCanvas(),
+    CONFIG,
+    AppState.animator,
+  );
 
   startPreview();
 }
@@ -199,16 +219,18 @@ async function switchPattern(patternName) {
 // ─── Carga de imágenes ────────────────────────────────────────────────────
 
 async function loadAllImages() {
-  return Promise.all(slots.map((s) => renderer.loadImage(s.imageSrc)));
+  return Promise.all(
+    AppState.slots.map((s) => AppState.renderer.loadImage(s.imageSrc)),
+  );
 }
 
 // ─── Preview ──────────────────────────────────────────────────────────────
 
 function startPreview() {
-  isPlaying = true;
+  AppState.isPlaying = true;
   UI.btnPlay.textContent = "⏸ Pausar";
 
-  animator.play(
+  AppState.animator.play(
     (elapsed, total) => {
       const ratio = Math.min(1, elapsed / total);
       UI.progressBar.style.width = `${ratio * 100}%`;
@@ -216,7 +238,7 @@ function startPreview() {
     () => {
       setStatus("Animación completa. Podés exportar el video.");
       UI.btnPlay.textContent = "▶ Reproducir";
-      isPlaying = false;
+      AppState.isPlaying = false;
     },
   );
 }
@@ -224,8 +246,8 @@ function startPreview() {
 // ─── Export frame-by-frame (CCapture) ────────────────────────────────────
 
 async function runExport() {
-  if (isExporting) return;
-  isExporting = true;
+  if (AppState.isExporting) return;
+  AppState.isExporting = true;
 
   UI.btnExport.disabled = true;
   UI.btnPlay.disabled = true;
@@ -237,16 +259,16 @@ async function runExport() {
   UI.progressWrap.classList.add("is-exporting");
   document.dispatchEvent(new CustomEvent("mandala:export-start"));
 
-  if (isPlaying) animator.pause();
-  animator.reset();
+  if (AppState.isPlaying) AppState.animator.pause();
+  AppState.animator.reset();
 
-  exporter.start(
+  AppState.exporter.start(
     (ratio) => {
       UI.progressBar.style.width = `${ratio * 100}%`;
       setStatus(`Exportando… ${Math.round(ratio * 100)}%`);
     },
     () => {
-      isExporting = false;
+      AppState.isExporting = false;
       UI.btnExport.disabled = false;
       UI.btnPlay.disabled = false;
       UI.btnSettings.disabled = false;
@@ -270,7 +292,7 @@ async function runCCaptureLoop() {
   const frameDeltaMs = 1000 / fps;
   const totalDuration = CONFIG.export.durationSeconds
     ? CONFIG.export.durationSeconds * 1000
-    : animator.totalDurationMs + 500;
+    : AppState.animator.totalDurationMs + 500;
 
   let simulatedTime = 0;
   setStatus("Exportando (CCapture frame-by-frame)…");
@@ -278,11 +300,11 @@ async function runCCaptureLoop() {
   await new Promise((resolve) => {
     function exportFrame() {
       if (simulatedTime >= totalDuration) {
-        exporter.stop().then(resolve);
+        AppState.exporter.stop().then(resolve);
         return;
       }
-      animator.tickExport(frameDeltaMs);
-      exporter.captureFrame();
+      AppState.animator.tickExport(frameDeltaMs);
+      AppState.exporter.captureFrame();
       simulatedTime += frameDeltaMs;
       requestAnimationFrame(exportFrame);
     }
@@ -340,11 +362,11 @@ function bindSlider(el, label, min, max, decimals, suffix, setter) {
  */
 function bindRestartingSlider(el, label, min, max, suffix, setter) {
   el.addEventListener("change", () => {
-    if (isExporting) return;
+    if (AppState.isExporting) return;
     const val = clamp(parseInt(el.value, 10), min, max);
     setter(val);
     label.textContent = `${val}${suffix}`;
-    animator.reset();
+    AppState.animator.reset();
     startPreview();
   });
 }
@@ -353,17 +375,17 @@ function bindRestartingSlider(el, label, min, max, suffix, setter) {
 
 function bindPlayControls() {
   UI.btnPlay.addEventListener("click", () => {
-    if (isExporting) return;
-    if (animator.isCompleted) {
-      animator.reset();
+    if (AppState.isExporting) return;
+    if (AppState.animator.isCompleted) {
+      AppState.animator.reset();
       startPreview();
-    } else if (isPlaying) {
-      animator.pause();
-      isPlaying = false;
+    } else if (AppState.isPlaying) {
+      AppState.animator.pause();
+      AppState.isPlaying = false;
       UI.btnPlay.textContent = "▶ Reproducir";
     } else {
-      animator.resume();
-      isPlaying = true;
+      AppState.animator.resume();
+      AppState.isPlaying = true;
       UI.btnPlay.textContent = "⏸ Pausar";
     }
   });
@@ -371,9 +393,9 @@ function bindPlayControls() {
 
 function bindResetControl() {
   UI.btnReset.addEventListener("click", () => {
-    if (isExporting) return;
-    animator.reset();
-    isPlaying = false;
+    if (AppState.isExporting) return;
+    AppState.animator.reset();
+    AppState.isPlaying = false;
     UI.btnPlay.textContent = "▶ Reproducir";
     UI.progressBar.style.width = "0%";
     setStatus("Animación reseteada.");
@@ -382,7 +404,7 @@ function bindResetControl() {
 
 function bindExportControl() {
   UI.btnExport.addEventListener("click", () => {
-    if (!isExporting) runExport();
+    if (!AppState.isExporting) runExport();
   });
 }
 
@@ -401,7 +423,7 @@ function bindSettingsToggle() {
 function bindSpeedSlider() {
   // Efecto inmediato — no requiere reinicio de animación
   bindSlider(UI.speedSlider, UI.speedLabel, 0.1, 4.0, 1, "×", (v) =>
-    animator.setSpeed(v),
+    AppState.animator.setSpeed(v),
   );
 }
 
@@ -451,11 +473,11 @@ function bindDurationSlider() {
 
 function bindEffectSelect() {
   UI.effectSelect.addEventListener("change", () => {
-    if (isExporting) return;
+    if (AppState.isExporting) return;
     const val = UI.effectSelect.value;
     if (!VALID_EFFECTS.has(val)) return;
     CONFIG.animation.entryEffect = val;
-    animator.reset();
+    AppState.animator.reset();
     startPreview();
   });
 }
@@ -463,7 +485,7 @@ function bindEffectSelect() {
 function bindPatternSelect() {
   // Allowlist derivada del PATTERN_REGISTRY — fuente única de verdad
   UI.patternSelect.addEventListener("change", () => {
-    if (isExporting) return;
+    if (AppState.isExporting) return;
     const selected = UI.patternSelect.value;
     if (!Object.hasOwn(PATTERN_REGISTRY, selected)) return;
     switchPattern(selected);
@@ -529,7 +551,7 @@ function bindPresetControls() {
       return;
     }
     try {
-      savePreset(name, capturePreset(CONFIG, currentPattern));
+      savePreset(name, capturePreset(CONFIG, AppState.currentPattern));
       populatePresetSelect();
       UI.presetSelect.value = name;
       showPresetStatus(`✅ "${name}" guardado`, "ok");
@@ -540,7 +562,7 @@ function bindPresetControls() {
 
   // Exportar como archivo JSON
   UI.btnExportPreset.addEventListener("click", () => {
-    const data = capturePreset(CONFIG, currentPattern);
+    const data = capturePreset(CONFIG, AppState.currentPattern);
     const json = presetToJSON(data);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -557,7 +579,7 @@ function bindPresetControls() {
 
   // Cargar desde localStorage
   UI.btnLoadPreset.addEventListener("click", async () => {
-    if (isExporting) return;
+    if (AppState.isExporting) return;
     const name = UI.presetSelect.value;
     if (!name) {
       showPresetStatus("⚠ Seleccioná un preset", "err");
@@ -652,7 +674,7 @@ function syncUIFromConfig() {
   UI.loopCheckbox.checked = CONFIG.animation.loopAnimation;
   UI.effectSelect.value = CONFIG.animation.entryEffect;
   UI.captureSelect.value = CONFIG.export.captureMode;
-  UI.patternSelect.value = currentPattern;
+  UI.patternSelect.value = AppState.currentPattern;
   UI.transparentCheckbox.checked = CONFIG.export.transparentBg ?? false;
   UI.bgColorInput.disabled = CONFIG.export.transparentBg ?? false;
   UI.canvasArea.classList.toggle(
@@ -718,11 +740,11 @@ async function applyPresetData(data) {
   if (
     newPattern &&
     Object.hasOwn(PATTERN_REGISTRY, newPattern) &&
-    newPattern !== currentPattern
+    newPattern !== AppState.currentPattern
   ) {
     await switchPattern(newPattern);
   } else {
-    animator.reset();
+    AppState.animator.reset();
     startPreview();
   }
 }

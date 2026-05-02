@@ -47,10 +47,10 @@
       <div class="controls">
         <!-- Reproducción -->
         <div class="control-group">
-          <button class="btn primary" id="btn-play" disabled>
+          <button class="btn primary" id="btn-play" disabled aria-label="Reproducir animación">
             ▶ Reproducir
           </button>
-          <button class="btn" id="btn-reset" disabled>↺ Reiniciar</button>
+          <button class="btn" id="btn-reset" disabled aria-label="Reiniciar animación">↺ Reiniciar</button>
         </div>
 
         <div class="sep"></div>
@@ -82,7 +82,7 @@
 
         <!-- Exportar -->
         <div class="control-group">
-          <button class="btn" id="btn-export" disabled>⬇ Exportar WebM</button>
+          <button class="btn" id="btn-export" disabled aria-label="Exportar video WebM">⬇ Exportar WebM</button>
         </div>
 
         <div class="sep"></div>
@@ -96,8 +96,8 @@
 
         <!-- Status + barra de progreso -->
         <div class="status-area">
-          <span id="status-text">Iniciando…</span>
-          <div id="progress-wrap">
+          <span id="status-text" aria-live="polite" aria-atomic="true">Iniciando…</span>
+          <div id="progress-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progreso de animación">
             <div id="progress-bar"></div>
           </div>
         </div>
@@ -209,8 +209,8 @@
             </div>
 
             <div class="settings-row">
-              <button class="btn btn-sm" id="btn-save-preset">💾 Guardar</button>
-              <button class="btn btn-sm" id="btn-export-preset">⬇ JSON</button>
+              <button class="btn btn-sm" id="btn-save-preset" aria-label="Guardar preset">💾 Guardar</button>
+              <button class="btn btn-sm" id="btn-export-preset" aria-label="Exportar preset como JSON">⬇ JSON</button>
               <!-- Importar JSON: label actúa de botón para el input oculto -->
               <label class="btn btn-sm" for="import-preset-file">⬆ Importar</label>
               <input
@@ -226,8 +226,8 @@
               <select id="preset-select">
                 <option value="">— seleccionar —</option>
               </select>
-              <button class="btn btn-sm" id="btn-load-preset">Cargar</button>
-              <button class="btn btn-sm" id="btn-delete-preset">Borrar</button>
+              <button class="btn btn-sm" id="btn-load-preset" aria-label="Cargar preset seleccionado">Cargar</button>
+              <button class="btn btn-sm" id="btn-delete-preset" aria-label="Borrar preset seleccionado">Borrar</button>
             </div>
 
             <p id="preset-status" class="preset-status"></p>

@@ -77,7 +77,16 @@ export function savePreset(name, data) {
   }
   const presets = listPresets();
   presets[name.trim()] = { ...data, savedAt: new Date().toISOString() };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+  } catch (e) {
+    if (e.name === "QuotaExceededError") {
+      throw new Error(
+        "Almacenamiento lleno — eliminá presets antiguos para liberar espacio",
+      );
+    }
+    throw e;
+  }
 }
 
 /**
@@ -96,7 +105,14 @@ export function loadPreset(name) {
 export function deletePreset(name) {
   const presets = listPresets();
   delete presets[name];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+  } catch (e) {
+    if (e.name === "QuotaExceededError") {
+      throw new Error("Almacenamiento lleno — no se pudo guardar el cambio");
+    }
+    throw e;
+  }
 }
 
 // ─── Serialización JSON ───────────────────────────────────────────────────────

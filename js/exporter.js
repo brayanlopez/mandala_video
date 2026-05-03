@@ -41,6 +41,8 @@ export class Exporter {
 
     this._onProgress = null; // (ratio 0–1) => void
     this._onDone = null; // (blob) => void
+    this._onAbort = null; // () => void
+    this._aborted = false;
   }
 
   // ─── API pública ──────────────────────────────────────────────────────────
@@ -101,6 +103,23 @@ export class Exporter {
     return this._isCapturing;
   }
 
+  /**
+   * Aborta la captura sin descargar el archivo.
+   * @param {Function} onAbort - Callback cuando se cancela
+   */
+  abort(onAbort) {
+    if (!this._isCapturing) return;
+    this._aborted = true;
+    this._onAbort = onAbort;
+    this._isCapturing = false;
+
+    if (this._config.export.captureMode === "ccapture") {
+      this._stopCCaptureAbort();
+    } else {
+      this._stopMediaRecorderAbort();
+    }
+  }
+
   // ─── CCapture ─────────────────────────────────────────────────────────────
 
   _startCCapture() {
@@ -155,6 +174,19 @@ export class Exporter {
     });
   }
 
+  _stopCCaptureAbort() {
+    if (this._capturer) {
+      try {
+        this._capturer.stop();
+      } catch (e) {
+        /* ignorar */
+      }
+      this._capturer = null;
+    }
+    if (this._renderer) this._renderer.resumeEffects();
+    if (this._onAbort) this._onAbort();
+  }
+
   // ─── MediaRecorder ────────────────────────────────────────────────────────
 
   _startMediaRecorder() {
@@ -183,6 +215,10 @@ export class Exporter {
     };
 
     this._recorder.onstop = () => {
+      if (this._aborted) {
+        if (this._onAbort) this._onAbort();
+        return;
+      }
       const blob = new Blob(this._chunks, { type: mimeType });
       const filename = this._config.export?.transparentBg
         ? "mandala_transparent.webm"
@@ -210,6 +246,19 @@ export class Exporter {
 
       this._recorder.stop();
     });
+  }
+
+  _stopMediaRecorderAbort() {
+    if (this._recorder && this._recorder.state !== "inactive") {
+      try {
+        this._recorder.stop();
+      } catch (e) {
+        /* ignorar */
+      }
+    }
+    this._chunks = [];
+    this._recorder = null;
+    // onstop handler will call this._onAbort() if this._aborted is true
   }
 
   _getSupportedMimeType() {

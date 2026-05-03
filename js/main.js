@@ -65,6 +65,7 @@ const UI = {
   exportDurationLabel: $("export-duration-label"),
   canvasArea: $("canvas-area"),
   ffmpegAlphaRow: $("ffmpeg-alpha-row"),
+  btnAbortExport: $("btn-abort-export"),
   // ── Motor de renderizado ─────────────────────────────────────────────────
   rendererSelect: $("renderer-select"),
   // ── Efectos visuales ────────────────────────────────────────────────────
@@ -359,6 +360,17 @@ async function runExport() {
     },
   );
 
+  // Wire abort button
+  const onAbort = () => {
+    AppState.isExporting = false;
+    setExportControls(false);
+    UI.progressWrap.classList.remove("is-exporting");
+    UI.progressBar.style.width = "0%";
+    setStatus("Exportación cancelada.");
+    document.dispatchEvent(new CustomEvent("mandala:export-end"));
+  };
+  UI.btnAbortExport.onclick = () => AppState.exporter.abort(onAbort);
+
   if (CONFIG.export.captureMode === "ccapture") {
     await runCCaptureLoop();
   }
@@ -376,6 +388,10 @@ async function runCCaptureLoop() {
 
   await new Promise((resolve) => {
     function exportFrame() {
+      if (AppState.exporter._aborted) {
+        resolve();
+        return;
+      }
       if (simulatedTime >= totalDuration) {
         AppState.exporter.stop().then(resolve);
         return;

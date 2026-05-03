@@ -107,6 +107,22 @@ header h1 {
   color: var(--text);
 }
 
+.btn-abort-export {
+  margin-top: 12px;
+  padding: 8px 24px;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-abort-export:hover {
+  background: #b91c1c;
+}
+
 .spinner {
   width: 40px;
   height: 40px;

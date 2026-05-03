@@ -13,14 +13,15 @@ function MockCCapture() {
 
 globalThis.CCapture = MockCCapture;
 
-globalThis.MediaRecorder = vi.fn().mockImplementation(() => ({
-  start: vi.fn(),
-  stop: vi.fn(),
-  ondataavailable: null,
-  onstop: null,
-  state: "inactive",
-}));
-
+globalThis.MediaRecorder = function () {
+  return {
+    start: vi.fn(),
+    stop: vi.fn(),
+    ondataavailable: null,
+    onstop: null,
+    state: "inactive",
+  };
+};
 globalThis.MediaRecorder.isTypeSupported = vi.fn(() => true);
 
 globalThis.URL = {
@@ -144,5 +145,123 @@ describe("Exporter - durationSeconds", () => {
     exporter.captureFrame();
 
     expect(progressCallback).toHaveBeenCalledWith(expect.any(Number));
+  });
+});
+
+describe("Exporter - abort", () => {
+  let canvas;
+  let config;
+  let animator;
+  let renderer;
+  let exporter;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    canvas = makeCanvas();
+    config = makeConfig();
+    animator = makeAnimator(5000);
+    renderer = makeRenderer();
+    exporter = new Exporter(canvas, config, animator, renderer);
+  });
+
+  test("abort should set isCapturing to false", () => {
+    exporter.start(vi.fn(), vi.fn());
+    exporter.abort(vi.fn());
+
+    expect(exporter.isCapturing).toBe(false);
+  });
+
+  test("abort should call onAbort callback", () => {
+    const onAbort = vi.fn();
+    exporter.start(vi.fn(), vi.fn());
+    exporter.abort(onAbort);
+
+    expect(onAbort).toHaveBeenCalled();
+  });
+
+  test("abort should call renderer.resumeEffects in ccapture mode", () => {
+    config.export.captureMode = "ccapture";
+    exporter = new Exporter(canvas, config, animator, renderer);
+    exporter.start(vi.fn(), vi.fn());
+    exporter.abort(vi.fn());
+
+    expect(renderer.resumeEffects).toHaveBeenCalled();
+  });
+
+  test("abort should not call onDone callback", () => {
+    const onDone = vi.fn();
+    exporter.start(vi.fn(), onDone);
+    exporter.abort(vi.fn());
+
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  test("abort should not download file in ccapture mode", () => {
+    config.export.captureMode = "ccapture";
+    exporter = new Exporter(canvas, config, animator, renderer);
+    exporter.start(vi.fn(), vi.fn());
+    exporter.abort(vi.fn());
+
+    expect(globalThis.URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
+  test("abort in mediarecorder mode should stop recorder", () => {
+    config.export.captureMode = "mediarecorder";
+    const recorder = { start: vi.fn(), stop: vi.fn(), state: "recording", ondataavailable: null, onstop: null };
+    // Override the constructor temporarily
+    const OriginalMediaRecorder = globalThis.MediaRecorder;
+    globalThis.MediaRecorder = function () { return recorder; };
+    globalThis.MediaRecorder.isTypeSupported = vi.fn(() => true);
+
+    exporter = new Exporter(canvas, config, animator, renderer);
+    exporter.start(vi.fn(), vi.fn());
+    exporter.abort(vi.fn());
+
+    expect(recorder.stop).toHaveBeenCalled();
+
+    // Restore
+    globalThis.MediaRecorder = OriginalMediaRecorder;
+  });
+
+  test("abort in mediarecorder mode should not download file", () => {
+    config.export.captureMode = "mediarecorder";
+    const recorder = { start: vi.fn(), stop: vi.fn(), state: "recording", ondataavailable: null, onstop: null };
+    // Override the constructor temporarily
+    const OriginalMediaRecorder = globalThis.MediaRecorder;
+    globalThis.MediaRecorder = function () { return recorder; };
+    globalThis.MediaRecorder.isTypeSupported = vi.fn(() => true);
+
+    exporter = new Exporter(canvas, config, animator, renderer);
+    exporter.start(vi.fn(), vi.fn());
+    exporter.abort(vi.fn());
+
+    expect(globalThis.URL.createObjectURL).not.toHaveBeenCalled();
+
+    // Restore
+    globalThis.MediaRecorder = OriginalMediaRecorder;
+  });
+
+  test("captureFrame should not capture after abort in ccapture mode", () => {
+    config.export.captureMode = "ccapture";
+    exporter = new Exporter(canvas, config, animator, renderer);
+    exporter.start(vi.fn(), vi.fn());
+    exporter.abort(vi.fn());
+    exporter.captureFrame();
+
+    expect(animator.tickExport).not.toHaveBeenCalled();
+  });
+
+  test("abort should set _aborted flag to true", () => {
+    exporter.start(vi.fn(), vi.fn());
+    exporter.abort(vi.fn());
+
+    expect(exporter._aborted).toBe(true);
+  });
+
+  test("multiple abort calls should not throw", () => {
+    exporter.start(vi.fn(), vi.fn());
+    exporter.abort(vi.fn());
+
+    expect(() => exporter.abort(vi.fn())).not.toThrow();
   });
 });

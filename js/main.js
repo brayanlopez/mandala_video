@@ -61,6 +61,8 @@ const UI = {
   fpsSelect: $("fps-select"),
   captureSelect: $("capture-select"),
   transparentCheckbox: $("transparent-checkbox"),
+  exportDurationSlider: $("export-duration-slider"),
+  exportDurationLabel: $("export-duration-label"),
   canvasArea: $("canvas-area"),
   ffmpegAlphaRow: $("ffmpeg-alpha-row"),
   // ── Motor de renderizado ─────────────────────────────────────────────────
@@ -640,6 +642,14 @@ function bindTransparentCheckbox() {
   });
 }
 
+function bindExportDurationSlider() {
+  UI.exportDurationSlider.addEventListener("input", () => {
+    const val = parseInt(UI.exportDurationSlider.value, 10);
+    CONFIG.export.durationSeconds = val;
+    UI.exportDurationLabel.textContent = `${val}s`;
+  });
+}
+
 // ── Presets (F-06) ────────────────────────────────────────────────────────
 
 /**
@@ -852,6 +862,7 @@ function bindControls() {
   bindFpsSelect();
   bindCaptureSelect();
   bindTransparentCheckbox();
+  bindExportDurationSlider();
   bindRendererSelect();
   bindEffectsControls();
   bindPresetControls();
@@ -891,6 +902,9 @@ function syncUIFromConfig() {
   UI.bgColorInput.disabled = CONFIG.export.transparentBg ?? false;
   UI.canvasArea.classList.toggle("transparent-mode", CONFIG.export.transparentBg ?? false);
   UI.ffmpegAlphaRow.style.display = (CONFIG.export.transparentBg ?? false) ? "" : "none";
+  const exportDur = CONFIG.export.durationSeconds ?? parseInt(UI.exportDurationSlider.value, 10);
+  UI.exportDurationSlider.value = exportDur;
+  UI.exportDurationLabel.textContent = `${exportDur}s`;
   // Efectos
   UI.idleFloatCheckbox.checked = CONFIG.effects.idleFloat.enabled;
   UI.idleFloatAmpSlider.value = String(CONFIG.effects.idleFloat.amplitude);

@@ -47,20 +47,10 @@
       <div class="controls">
         <!-- Reproducción -->
         <div class="control-group">
-          <button
-            class="btn primary"
-            id="btn-play"
-            disabled
-            aria-label="Reproducir animación"
-          >
+          <button class="btn primary" id="btn-play" disabled aria-label="Reproducir animación">
             ▶ Reproducir
           </button>
-          <button
-            class="btn"
-            id="btn-reset"
-            disabled
-            aria-label="Reiniciar animación"
-          >
+          <button class="btn" id="btn-reset" disabled aria-label="Reiniciar animación">
             ↺ Reiniciar
           </button>
         </div>
@@ -87,22 +77,14 @@
         <!-- Selector de patrón (opciones generadas desde PATTERN_REGISTRY) -->
         <div class="control-group">
           <label for="pattern-select">Patrón</label>
-          <select
-            id="pattern-select"
-            title="Seleccionar tipo de mandala"
-          ></select>
+          <select id="pattern-select" title="Seleccionar tipo de mandala"></select>
         </div>
 
         <div class="sep"></div>
 
         <!-- Exportar -->
         <div class="control-group">
-          <button
-            class="btn"
-            id="btn-export"
-            disabled
-            aria-label="Exportar video WebM"
-          >
+          <button class="btn" id="btn-export" disabled aria-label="Exportar video WebM">
             ⬇ Exportar WebM
           </button>
         </div>
@@ -111,20 +93,14 @@
 
         <!-- Toggle panel de ajustes -->
         <div class="control-group">
-          <button
-            class="btn"
-            id="btn-settings"
-            title="Abrir / cerrar panel de ajustes"
-          >
+          <button class="btn" id="btn-settings" title="Abrir / cerrar panel de ajustes">
             ⚙ Ajustes
           </button>
         </div>
 
         <!-- Status + barra de progreso -->
         <div class="status-area">
-          <span id="status-text" aria-live="polite" aria-atomic="true"
-            >Iniciando…</span
-          >
+          <span id="status-text" aria-live="polite" aria-atomic="true">Iniciando…</span>
           <div
             id="progress-wrap"
             role="progressbar"
@@ -157,14 +133,7 @@
 
             <div class="settings-row">
               <label for="speed-slider">Velocidad</label>
-              <input
-                type="range"
-                id="speed-slider"
-                min="0.2"
-                max="3"
-                step="0.1"
-                value="1.0"
-              />
+              <input type="range" id="speed-slider" min="0.2" max="3" step="0.1" value="1.0" />
               <span class="val-label" id="speed-label">1.0×</span>
             </div>
 
@@ -206,27 +175,13 @@
 
             <div class="settings-row">
               <label for="stagger-slider">Stagger</label>
-              <input
-                type="range"
-                id="stagger-slider"
-                min="0"
-                max="500"
-                step="10"
-                value="160"
-              />
+              <input type="range" id="stagger-slider" min="0" max="500" step="10" value="160" />
               <span class="val-label" id="stagger-label">160ms</span>
             </div>
 
             <div class="settings-row">
               <label for="duration-slider">Duración entrada</label>
-              <input
-                type="range"
-                id="duration-slider"
-                min="200"
-                max="2000"
-                step="50"
-                value="700"
-              />
+              <input type="range" id="duration-slider" min="200" max="2000" step="50" value="700" />
               <span class="val-label" id="duration-label">700ms</span>
             </div>
 
@@ -346,11 +301,7 @@
             </div>
 
             <div class="settings-row">
-              <button
-                class="btn btn-sm"
-                id="btn-save-preset"
-                aria-label="Guardar preset"
-              >
+              <button class="btn btn-sm" id="btn-save-preset" aria-label="Guardar preset">
                 💾 Guardar
               </button>
               <button
@@ -361,15 +312,8 @@
                 ⬇ JSON
               </button>
               <!-- Importar JSON: label actúa de botón para el input oculto -->
-              <label class="btn btn-sm" for="import-preset-file"
-                >⬆ Importar</label
-              >
-              <input
-                type="file"
-                id="import-preset-file"
-                accept=".json"
-                style="display: none"
-              />
+              <label class="btn btn-sm" for="import-preset-file">⬆ Importar</label>
+              <input type="file" id="import-preset-file" accept=".json" style="display: none" />
             </div>
 
             <div class="settings-row">
@@ -419,9 +363,7 @@
             <div class="settings-row">
               <label for="capture-select">Motor</label>
               <select id="capture-select" title="Motor de captura de video">
-                <option value="ccapture" selected>
-                  CCapture (recomendado)
-                </option>
+                <option value="ccapture" selected>CCapture (recomendado)</option>
                 <option value="mediarecorder">MediaRecorder</option>
               </select>
             </div>
@@ -435,23 +377,29 @@
               />
             </div>
 
-            <div class="settings-row ffmpeg-row">
-              <label>Convertir a MP4</label>
-              <code
-                >ffmpeg -i mandala.webm -c:v libx264 -crf 17 -pix_fmt yuv420p
-                out.mp4</code
-              >
+            <div class="settings-row">
+              <label for="export-duration-slider">Duración export</label>
+              <input
+                type="range"
+                id="export-duration-slider"
+                min="1"
+                max="60"
+                step="1"
+                value="15"
+              />
+              <span class="val-label" id="export-duration-label">15s</span>
             </div>
 
-            <div
-              class="settings-row ffmpeg-row"
-              id="ffmpeg-alpha-row"
-              style="display: none"
-            >
+            <div class="settings-row ffmpeg-row">
+              <label>Convertir a MP4</label>
+              <code>ffmpeg -i mandala.webm -c:v libx264 -crf 17 -pix_fmt yuv420p out.mp4</code>
+            </div>
+
+            <div class="settings-row ffmpeg-row" id="ffmpeg-alpha-row" style="display: none">
               <label>Alpha → VP9</label>
               <code
-                >ffmpeg -i mandala_transparent.webm -c:v libvpx-vp9 -pix_fmt
-                yuva420p out_alpha.webm</code
+                >ffmpeg -i mandala_transparent.webm -c:v libvpx-vp9 -pix_fmt yuva420p
+                out_alpha.webm</code
               >
             </div>
           </div>

@@ -9,7 +9,7 @@
     "three": "0.128.0"
   },
   "scripts": {
-    "start": "node server.js",
+    "dev": "node server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

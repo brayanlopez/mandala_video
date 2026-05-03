@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mandala Animada</title>
+    <title>Mandala Animada - Generador de Animaciones</title>
+
+    <!-- SEO -->
+    <meta name="description" content="Generador de mandalas animados con exportación a video WebM. Crea patrones geométricos con p5.js y Three.js.">
+    <!-- <link rel="canonical" href="https://tu-dominio.com"> -->
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Mandala Animada - Generador de Animaciones">
+    <meta property="og:description" content="Crea mandalas animados y exporta como video WebM.">
+    <meta property="og:type" content="website">
 
     <!--
     Content Security Policy:
@@ -26,7 +35,8 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="app">
+    <a href="#canvas-container" class="skip-link">Saltar a la animación</a>
+    <main class="app">
       <!-- ── Header ─────────────────────────────────────────────────────────── -->
       <header>
         <h1>🌸 Mandala Animada</h1>
@@ -45,7 +55,8 @@
       </div>
 
       <!-- ── Controles principales ──────────────────────────────────────────── -->
-      <div class="controls">
+      <section class="controls" aria-label="Controles de animación">
+        <h2 class="sr-only">Controles</h2>
         <!-- Reproducción -->
         <div class="control-group">
           <button class="btn primary" id="btn-play" disabled aria-label="Reproducir animación">
@@ -117,7 +128,7 @@
 
       <!-- ── Panel de ajustes (F-03) ───────────────────────────────────────── -->
       <!-- Colapsable. Se despliega al pulsar el botón ⚙ Ajustes.             -->
-      <div class="settings-panel" id="settings-panel" aria-hidden="true">
+      <div class="settings-panel" id="settings-panel" role="region" aria-label="Panel de ajustes" aria-hidden="true">
         <div class="settings-inner">
           <!-- Sección: Animación ──────────────────────────────────────────── -->
           <div class="settings-section">
@@ -406,8 +417,7 @@
           </div>
         </div>
       </div>
-    </div>
-    <!-- .app -->
+    </main>
 
     <!--
   ── Librerías locales (servidas desde node_modules vía server.js) ─────────

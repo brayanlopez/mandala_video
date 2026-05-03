@@ -33,16 +33,17 @@ export class Exporter {
     this._animator = animator;
     this._renderer = renderer;
 
-    this._capturer = null; // instancia de CCapture
-    this._recorder = null; // instancia de MediaRecorder
-    this._chunks = []; // chunks de MediaRecorder
+    this._capturer = null;
+    this._recorder = null;
+    this._chunks = [];
     this._isCapturing = false;
     this._frameCount = 0;
-
-    this._onProgress = null; // (ratio 0–1) => void
-    this._onDone = null; // (blob) => void
-    this._onAbort = null; // () => void
     this._aborted = false;
+    this._mimeType = null;
+
+    this._onProgress = null;
+    this._onDone = null;
+    this._onAbort = null;
   }
 
   // ─── API pública ──────────────────────────────────────────────────────────
@@ -58,6 +59,7 @@ export class Exporter {
     this._onDone = onDone;
     this._isCapturing = true;
     this._frameCount = 0;
+    this._aborted = false;
 
     if (this._config.export.captureMode === "ccapture") {
       this._startCCapture();
@@ -71,12 +73,11 @@ export class Exporter {
    * Solo relevante para modo 'ccapture' (se llama manualmente desde main.js).
    */
   captureFrame() {
-    if (!this._isCapturing) return;
+    if (this._aborted || !this._isCapturing) return;
     if (this._config.export.captureMode === "ccapture" && this._capturer) {
       this._capturer.capture(this._canvas);
       this._frameCount++;
 
-      // Calcular progreso
       const totalFrames = this._getTotalFrames();
       if (totalFrames > 0 && this._onProgress) {
         this._onProgress(Math.min(1, this._frameCount / totalFrames));
@@ -89,7 +90,7 @@ export class Exporter {
    * @returns {Promise<void>}
    */
   async stop() {
-    if (!this._isCapturing) return;
+    if (!this._isCapturing || this._aborted) return;
     this._isCapturing = false;
 
     if (this._config.export.captureMode === "ccapture") {
@@ -114,28 +115,25 @@ export class Exporter {
     this._isCapturing = false;
 
     if (this._config.export.captureMode === "ccapture") {
-      this._stopCCaptureAbort();
+      this._abortCCapture();
     } else {
-      this._stopMediaRecorderAbort();
+      this._abortMediaRecorder();
     }
   }
 
   // ─── CCapture ─────────────────────────────────────────────────────────────
 
   _startCCapture() {
-    // Congelar efectos GPU-side durante el export frame-by-frame
     if (this._renderer) this._renderer.pauseEffects();
 
-    // CCapture se carga como script global desde el HTML
     if (typeof CCapture === "undefined") {
-      console.error(
-        "[Exporter] CCapture no está disponible. Verificá que el script esté incluido en index.html.",
-      );
+      console.error("[Exporter] CCapture no está disponible.");
+      this._isCapturing = false;
+      if (this._onDone) this._onDone(null);
       return;
     }
 
     try {
-      // eslint-disable-next-line no-undef
       this._capturer = new CCapture({
         format: "webm",
         framerate: this._config.canvas.fps,
@@ -144,8 +142,7 @@ export class Exporter {
         display: false,
       });
       this._capturer.start();
-    } catch (e) {
-      console.error("[Exporter] CCapture falló al iniciar:", e.message);
+    } catch {
       this._capturer = null;
       this._isCapturing = false;
       if (this._onDone) this._onDone(null);
@@ -167,18 +164,17 @@ export class Exporter {
         this._downloadBlob(blob, filename);
         if (this._onDone) this._onDone(blob);
         if (this._onProgress) this._onProgress(1);
-        // Reanudar efectos GPU-side tras finalizar el export
         if (this._renderer) this._renderer.resumeEffects();
         resolve();
       });
     });
   }
 
-  _stopCCaptureAbort() {
+  _abortCCapture() {
     if (this._capturer) {
       try {
         this._capturer.stop();
-      } catch (e) {
+      } catch {
         /* ignorar */
       }
       this._capturer = null;
@@ -193,17 +189,15 @@ export class Exporter {
     let stream;
     try {
       stream = this._canvas.captureStream(this._config.canvas.fps);
-    } catch (e) {
-      console.error("[Exporter] captureStream falló:", e.message);
+    } catch {
       this._isCapturing = false;
       if (this._onDone) this._onDone(null);
       return;
     }
 
-    // Seleccionar codec disponible
-    const mimeType = this._getSupportedMimeType();
+    this._mimeType = this._getSupportedMimeType();
     const options = {
-      mimeType,
+      mimeType: this._mimeType,
       videoBitsPerSecond: this._config.export.videoBitsPerSecond,
     };
 
@@ -219,7 +213,7 @@ export class Exporter {
         if (this._onAbort) this._onAbort();
         return;
       }
-      const blob = new Blob(this._chunks, { type: mimeType });
+      const blob = new Blob(this._chunks, { type: this._mimeType });
       const filename = this._config.export?.transparentBg
         ? "mandala_transparent.webm"
         : "mandala.webm";
@@ -228,7 +222,7 @@ export class Exporter {
       if (this._onProgress) this._onProgress(1);
     };
 
-    this._recorder.start(100); // chunk cada 100ms
+    this._recorder.start(100);
   }
 
   _stopMediaRecorder() {
@@ -239,8 +233,8 @@ export class Exporter {
       }
 
       const originalOnStop = this._recorder.onstop;
-      this._recorder.onstop = (e) => {
-        if (originalOnStop) originalOnStop(e);
+      this._recorder.onstop = () => {
+        if (originalOnStop) originalOnStop();
         resolve();
       };
 
@@ -248,17 +242,14 @@ export class Exporter {
     });
   }
 
-  _stopMediaRecorderAbort() {
+  _abortMediaRecorder() {
     if (this._recorder && this._recorder.state !== "inactive") {
       try {
         this._recorder.stop();
-      } catch (e) {
+      } catch {
         /* ignorar */
       }
     }
-    this._chunks = [];
-    this._recorder = null;
-    // onstop handler will call this._onAbort() if this._aborted is true
   }
 
   _getSupportedMimeType() {
@@ -268,39 +259,25 @@ export class Exporter {
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
-  /**
-   * Calcula el total de frames esperado para la barra de progreso.
-   * @returns {number}
-   */
   _getTotalFrames() {
     const durationSec =
       this._config.export.durationSeconds ?? this._animator.totalDurationMs / 1000;
     return Math.ceil(durationSec * this._config.canvas.fps);
   }
 
-  /**
-   * Dispara la descarga de un Blob como archivo.
-   * Usa createElement+click en vez de innerHTML para evitar XSS (CWE-79).
-   *
-   * @param {Blob}   blob
-   * @param {string} filename
-   */
   _downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-
-    // Sanitizar nombre de archivo: solo alfanuméricos, -, _, .
     const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
 
     a.href = url;
     a.download = safeName;
-    a.textContent = ""; // sin contenido visible
+    a.textContent = "";
 
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
 
-    // Revocar el object URL para liberar memoria
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
 }

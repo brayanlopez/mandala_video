@@ -1011,10 +1011,28 @@ document.addEventListener("mandala:ready", () => {
 });
 
 document.addEventListener("mandala:export-start", () => {
-  document.getElementById("export-overlay").classList.add("visible");
+  const overlay = document.getElementById("export-overlay");
+  overlay.classList.add("visible");
+  // Focus trap: move focus to abort button
+  const abortBtn = document.getElementById("btn-abort-export");
+  if (abortBtn) abortBtn.focus();
+  // Prevent tabbing outside overlay
+  overlay._focusTrap = (e) => {
+    if (e.key !== "Tab") return;
+    e.preventDefault();
+    abortBtn.focus();
+  };
+  overlay.addEventListener("keydown", overlay._focusTrap);
 });
 document.addEventListener("mandala:export-end", () => {
-  document.getElementById("export-overlay").classList.remove("visible");
+  const overlay = document.getElementById("export-overlay");
+  overlay.classList.remove("visible");
+  if (overlay._focusTrap) {
+    overlay.removeEventListener("keydown", overlay._focusTrap);
+    overlay._focusTrap = null;
+  }
+  // Restore focus to export button
+  UI.btnExport.focus();
 });
 
 document.addEventListener("DOMContentLoaded", init);

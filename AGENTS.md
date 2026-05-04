@@ -62,6 +62,7 @@ Key contract: **Renderer interface** (`renderer-p5.js`) defines 10 methods. Any 
 ### Adding tests
 
 Follow existing patterns in `test/` files. Each module has a corresponding test file:
+
 - `animator.test.js` — state machine, 8 entry effects, 4 continuous effects
 - `geometry-patterns.test.js` — 14 patterns, coordinates, image assignment
 - `renderer-p5.test.js` — command queue, glow, particles, export interface
@@ -91,15 +92,15 @@ Follow existing patterns in `test/` files. Each module has a corresponding test 
 
 ## Key files
 
-| File | Purpose |
-|------|---------|
-| `config.js` | Single source of truth for all parameters (138 lines) |
-| `js/main.js` | Orchestrator, AppState, UI binding (845 lines) |
-| `js/animator.js` | Animation state machine + continuous effects (420 lines) |
-| `js/renderer-p5.js` | p5.js rendering adapter (255 lines) |
-| `js/geometry-patterns.js` | 14 geometric layout algorithms (731 lines) |
-| `docs/ARCHITECTURE.md` | Full system design and config reference |
-| `docs/DEVELOPMENT.md` | Dev setup, testing details, module notes |
+| File                      | Purpose                                                  |
+| ------------------------- | -------------------------------------------------------- |
+| `config.js`               | Single source of truth for all parameters (138 lines)    |
+| `js/main.js`              | Orchestrator, AppState, UI binding (845 lines)           |
+| `js/animator.js`          | Animation state machine + continuous effects (420 lines) |
+| `js/renderer-p5.js`       | p5.js rendering adapter (255 lines)                      |
+| `js/geometry-patterns.js` | 14 geometric layout algorithms (731 lines)               |
+| `docs/ARCHITECTURE.md`    | Full system design and config reference                  |
+| `docs/DEVELOPMENT.md`     | Dev setup, testing details, module notes                 |
 
 ## CI/CD pipeline
 

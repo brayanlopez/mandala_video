@@ -319,20 +319,58 @@ function startPreview() {
 /**
  * Habilita o deshabilita los controles que no deben usarse durante el export.
  * bgColorInput tiene lógica especial: permanece deshabilitado si transparentBg está activo.
+ * Oculta el panel de ajustes y deshabilita todos los botones excepto abort.
  * @param {boolean} disabled
  */
 function setExportControls(disabled) {
-  [
+  const controlsToDisable = [
     UI.btnExport,
     UI.btnPlay,
     UI.btnSettings,
+    UI.btnReset,
+    UI.btnResetAnimation,
+    UI.btnToggleEffects,
     UI.staggerSlider,
     UI.durationSlider,
     UI.transparentCheckbox,
-  ].forEach((el) => {
-    el.disabled = disabled;
+    UI.patternSelect,
+    UI.rendererSelect,
+    UI.effectSelect,
+    UI.bgColorInput,
+    UI.imgScaleSlider,
+    UI.rotationSlider,
+    UI.loopCheckbox,
+    UI.fpsSelect,
+    UI.captureSelect,
+    UI.exportDurationSlider,
+    UI.idleFloatCheckbox,
+    UI.idleFloatAmpSlider,
+    UI.camBreathingCheckbox,
+    UI.camBreathingSwaySlider,
+    UI.particlesCheckbox,
+    UI.particlesCountSlider,
+    UI.glowCheckbox,
+    UI.glowIntensitySlider,
+    UI.presetNameInput,
+    UI.presetSelect,
+    UI.btnSavePreset,
+    UI.btnExportPreset,
+    UI.btnLoadPreset,
+    UI.btnDeletePreset,
+    UI.importPresetFile,
+  ];
+
+  controlsToDisable.forEach((el) => {
+    if (el) el.disabled = disabled;
   });
+
   UI.bgColorInput.disabled = disabled || CONFIG.export.transparentBg;
+
+  if (disabled) {
+    UI.settingsPanel.classList.remove("open");
+    UI.btnSettings.classList.remove("active");
+    UI.settingsPanel.setAttribute("aria-hidden", "true");
+  }
 }
 
 async function runExport() {
